@@ -1,25 +1,47 @@
-# Python
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
-# Virtual environments
+# Environments
 venv/
 ENV/
 env/
+.venv/
 
-# Dataset images
-data/
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
 
-# Jupyter
-.ipynb_checkpoints/
-
-# VS Code
-.vscode/
-
-# Logs
+# Logs & Streams
 *.log
+streamlit.*.log
 
-# OS files
+# Temporary artifacts
+temp_*
+*.tmp
+
+# System
 .DS_Store
 Thumbs.db
+
+# IDE & Editor
+.vscode/
+.idea/
+.ipynb_checkpoints/
+
+# Data
+data/
+
+# Model checkpoints (keep active production model)
+experiments/
+*.pt
+model/*checkpoint*.keras
+!model/model.keras
+
+# Outputs (local audit database)
+outputs/*.db
+outputs/metrics/
+!outputs/.gitkeep

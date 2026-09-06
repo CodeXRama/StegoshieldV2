@@ -1,201 +1,134 @@
-# StegoShield - Steganography Detection System
+# 🛡️ StegoShield — Image Steganography Detection & Forensics
 
-A deep learning-based system for detecting hidden data (steganography) in images using CNN and High-Pass Filtering.
+StegoShield is a machine learning and digital forensics application for detecting steganography (hidden data) in images. It combines a Convolutional Neural Network (CNN) trained with TensorFlow/Keras with forensic analysis tools including Error Level Analysis (ELA), high-frequency noise maps, color channel histograms, and EXIF metadata inspection.
 
-## Project Structure
+---
+## 🌟 Key Features
 
-```
+1. **CNN Steganography Detection**:
+   - Neural network trained on paired clean and stego image datasets.
+   - Temperature scaling calibration for smoother, calibrated probability estimates.
+   - Configurable decision thresholds to balance false positive and false negative rates.
+
+2. **Digital Image Forensics**:
+   - **Error Level Analysis (ELA)**: Analyzes compression differences across image regions.
+   - **Noise Residual Extraction**: Highlights subtle high-frequency spatial patterns.
+   - **Color Histograms**: Analyzes discrete 256-bin distributions across Red, Green, Blue, and Luminance channels.
+   - **EXIF & Metadata Viewer**: Displays camera metadata, software tags, and GPS coordinates if present.
+
+3. **Batch Directory Scanner**:
+   - Scans image folders inside the configured data root.
+   - Real-time progress display and exportable CSV scan history.
+
+4. **Web Dashboard**:
+   - Interactive UI built with Streamlit for inspecting single images or performing batch scans.
+
+---
+
+## 📁 Repository Structure
+
+```text
 StegoShield/
-├── train_cnn.py           # Training script
 ├── app/
-│   └── app.py            # Streamlit web interface
-├── config.py              # Configuration settings
-├── requirements.txt       # Python dependencies
-├── README.md              # This file
+│   ├── app.py              # Main Streamlit web application
+│   ├── forensics_tab.py    # Forensic tabs (ELA, Noise, Histograms, Metadata)
+│   ├── scanner.py          # Detection viewport, batch scanner, report export
+│   └── styles.py           # Dashboard styling and typography
 ├── data/
-│   ├── clean_images/     # Raw clean images (drop here)
-│   ├── stego_images/     # Raw stego images (drop here)
-│   ├── train/
-│   │   ├── clean/        # Training clean images
-│   │   └── stego/        # Training stego images
-│   └── test/
-│       ├── clean/        # Test clean images
-│       └── stego/        # Test stego images
+│   ├── train_data/         # Training images (clean & stego)
+│   ├── val_data/           # Validation images (clean & stego)
+│   └── test_data/          # Test images (clean & stego)
 ├── model/
-│   ├── cnn_model.keras   # Trained model
-│   └── best_model.keras  # Best checkpoint
-└── utils/
-    └── model_utils.py    # Utility functions
+│   ├── model.keras         # Trained model weights
+│   ├── best_model.keras    # Best checkpoint weights
+│   └── calibration.json    # Probability temperature calibration
+├── tests/
+│   ├── conftest.py         # Pytest fixtures and mock models
+│   ├── test_forensics_utils.py # Forensic tools test suite
+│   ├── test_model_utils.py # Preprocessing & thresholding tests
+│   └── test_scanner.py     # Scanner & safety tests
+├── utils/
+│   ├── forensics_utils.py  # ELA, noise maps, histograms, EXIF extraction
+│   └── model_utils.py      # Preprocessing, normalization, model loader, inference
+├── calibrate_temperature.py# Probability calibration tool
+├── config.py               # Application configuration and thresholds
+├── evaluate_model.py       # Test set evaluation (Accuracy, F1, ROC-AUC)
+├── prepare_data.py         # Dataset organization and splitting utility
+├── test_system.py          # System diagnostic tool
+├── train_cnn.py            # CNN training pipeline
+├── Savery.ttf              # Primary UI font
+├── Savery-Outline.ttf      # Outline accent font
+├── StegoShield_Training_Colab.ipynb # Google Colab GPU training notebook
+└── requirements.txt        # Project dependencies
 ```
 
-## Installation
+---
 
-1. **Clone/Create Virtual Environment:**
-   ```bash
-   python -m venv venv
-   source venv/Scripts/activate  # Windows
-   # or
-   source venv/bin/activate      # Linux/Mac
-   ```
+## 🚀 Getting Started
 
-2. **Install Dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 1. Installation
 
-## Setup Data
+Ensure Python 3.10+ is installed, then install the dependencies:
 
-1. Place clean images (no hidden data) in `data/clean_images/`
-2. Place images with steganography in `data/stego_images/`
-3. Run `python prepare_data.py` to split into:
-  - `data/train/clean/` and `data/train/stego/`
-  - `data/test/clean/` and `data/test/stego/`
-
-Example directory structure:
-```
-data/
-├── clean_images/
-│   ├── image1.jpg
-│   ├── image2.jpg
-│   └── ...
-└── stego_images/
-    ├── hidden1.jpg
-    ├── hidden2.jpg
-    └── ...
+```powershell
+pip install -r requirements.txt
 ```
 
-## Training the Model
+### 2. Run Diagnostics
 
-Run the training script:
-```bash
+Verify that data directories and model weights are ready:
+
+```powershell
+python test_system.py
+```
+
+### 3. Launch the Application
+
+Start the Streamlit web dashboard:
+
+```powershell
+python -m streamlit run app/app.py
+```
+
+Open `http://localhost:8501` in your browser.
+
+---
+
+## 🔬 Training & Evaluation
+
+### Data Preparation
+Organize paired clean and stego images into train, validation, and test splits:
+```powershell
+python prepare_data.py
+```
+
+### Training
+Train the CNN model with early stopping and learning rate scheduling:
+```powershell
 python train_cnn.py
 ```
+Weights are saved to `model/model.keras` and `model/best_model.keras`.
 
-**What the training script does:**
-- Loads images from `data/train/clean/` and `data/train/stego/`
-- Applies High-Pass Filter (HPF) preprocessing for noise extraction
-- Splits training data 80/20 into training and validation sets
-- Evaluates on the held-out test set in `data/test/clean/` and `data/test/stego/`
-- Trains a CNN with:
-  - 50 epochs maximum
-  - Early stopping (patience=10)
-  - Learning rate reduction on plateau
-  - Model checkpointing (saves best model)
-- Evaluates and saves the trained model
+### Temperature Calibration
+Calibrate output probabilities against the validation set:
+```powershell
+python calibrate_temperature.py
+```
+Saves the optimal temperature parameter to `model/calibration.json`.
 
-**Output:**
-- `model/cnn_model.keras` - Final trained model
-- `model/best_model.keras` - Best checkpoint
-- `model/training_history.png` - Training curves
-
-## Running the Web App
-
-Launch the Streamlit app:
-```bash
-streamlit run app/app.py
+### Model Evaluation
+Evaluate the model on the test dataset:
+```powershell
+python evaluate_model.py
 ```
 
-Then open: http://localhost:8501
+---
 
-**Features:**
-- Upload images (JPG, PNG, BMP)
-- Real-time steganography detection
-- Confidence scores and risk assessment
-- Adjustable detection threshold
-- Detailed analysis metrics
+## 🧪 Testing
 
-**Demo mode note:**
-- The UI can optionally force a DETECTED/HIGH result for showcasing via `DEMO_FORCE_DETECTED` in [app/app.py](app/app.py).
+Run unit tests:
 
-## Model Architecture
-
-The CNN model consists of:
-
+```powershell
+pytest tests -q
 ```
-Input (64x64x3)
-  ↓
-Block 1: Conv2D(32) → BN → Conv2D(32) → BN → AvgPool → Dropout
-  ↓
-Block 2: Conv2D(64) → BN → Conv2D(64) → BN → AvgPool → Dropout
-  ↓
-Block 3: Conv2D(128) → BN → Conv2D(128) → BN → AvgPool → Dropout
-  ↓
-Block 4: Conv2D(256) → BN → Dropout
-  ↓
-GlobalAveragePooling2D()
-  ↓
-Dense(256) → BN → Dropout(0.5)
-  ↓
-Dense(128) → BN → Dropout(0.4)
-  ↓
-Dense(1, sigmoid) → Output [0-1]
-```
-
-## Key Improvements
-
-### Fixed Issues:
-✓ Fixed data pipeline - now uses proper tf.data API instead of deprecated ImageDataGenerator
-✓ Increased epochs from 4 to 50 with early stopping
-✓ Added High-Pass Filter preprocessing to extract steganographic noise
-✓ Integrated real model predictions in web app (no more random values)
-✓ Added comprehensive error handling
-✓ Created reusable utility functions
-✓ Added configuration management
-
-### Performance Enhancements:
-✓ Improved CNN architecture with doubled Conv blocks
-✓ Better regularization (L2 + Dropout + BatchNorm)
-✓ More metrics tracked (AUC, Precision, Recall, F1)
-✓ Model checkpointing to save best weights
-✓ Learning rate scheduling with ReduceLROnPlateau
-✓ Data augmentation for better generalization
-
-## Configuration
-
-Edit `config.py` to adjust:
-- Image size, batch size, training epochs
-- Detection thresholds
-- Data directory paths
-- Model save locations
-- Augmentation parameters
-
-## Expected Performance
-
-After training on a balanced dataset:
-- Accuracy: >85%
-- Precision: >80%
-- Recall: >80%
-- AUC: >0.90
-
-## Troubleshooting
-
-**No images found during training:**
-- Ensure images are in `data/clean_images/` and `data/stego_images/`
-- Verify image formats are `.jpg`, `.jpeg`, or `.png`
-
-**Low accuracy:**
-- Increase training data (need at least 100-200 images per class)
-- Adjust augmentation settings in config.py
-- Increase EPOCHS in config.py
-- Check image quality and diversity
-
-**Model loading errors in app:**
-- Ensure `model/cnn_model.keras` exists
-- Run training script first: `python train_cnn.py`
-- Check file permissions
-
-## Dependencies
-
-- TensorFlow 2.21.0
-- Keras 3.12.1
-- OpenCV 4.13.0
-- Scikit-learn 1.7.2
-- NumPy 2.2.6
-- Streamlit 1.55.0
-- Matplotlib 3.10.0
-
-## Author
-StegoShield Development Team
-
-## Disclaimer
-This tool is for **authorized security analysis and educational purposes only**. Misuse for unauthorized access or unethical purposes is prohibited.
+All 15 unit tests cover forensics utilities, model normalization, risk thresholding, calibration, and path safety validation.

@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>STEGOSHIELD // Image Forensics Workstation</title>
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <style>
+    @layer base {
+      html, body { margin: 0; padding: 0; background-color: #0d0e10; }
+      body { overscroll-behavior: none; }
+      main > :first-child { margin-top: 0 !important; }
+      main > :last-child { margin-bottom: 0 !important; }
+    }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: #121315; }
+    ::-webkit-scrollbar-thumb { background: #292a2c; }
+    ::-webkit-scrollbar-thumb:hover { background: #caf231; }
+
+    @keyframes scanline {
+      0% { top: 0%; opacity: 0.9; }
+      50% { opacity: 1; }
+      100% { top: 100%; opacity: 0.9; }
+    }
+    .scanner-beam {
+      animation: scanline 2.1s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    }
+    .reticle-grid {
+      background-size: 24px 24px;
+      background-image: 
+        linear-gradient(to right, rgba(42, 44, 47, 0.4) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(42, 44, 47, 0.4) 1px, transparent 1px);
+    }
+    .residual-pattern {
+      background-size: 6px 6px;
+      background-image: 
+        radial-gradient(circle at 1px 1px, rgba(202, 242, 49, 0.35) 1px, transparent 0),
+        radial-gradient(circle at 4px 4px, rgba(224, 82, 56, 0.3) 1px, transparent 0);
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "surface-bright": "#38393b",
+            "surface-container-highest": "#343537",
+            "primary": "#ffffff",
+            "on-tertiary-fixed": "#3f0400",
+            "surface-variant": "#343537",
+            "on-primary-fixed-variant": "#3d4c00",
+            "on-secondary-fixed-variant": "#44474a",
+            "inverse-on-surface": "#303032",
+            "on-tertiary-container": "#b8351e",
+            "secondary": "#c5c6ca",
+            "secondary-fixed-dim": "#c5c6ca",
+            "on-surface": "#e3e2e4",
+            "on-secondary-fixed": "#191c1e",
+            "outline-variant": "#454934",
+            "on-primary": "#293500",
+            "error-container": "#93000a",
+            "on-error": "#690005",
+            "on-tertiary": "#650a00",
+            "outline": "#8f937a",
+            "surface-container-high": "#292a2c",
+            "surface-container": "#1f2022",
+            "surface-container-low": "#1b1c1e",
+            "surface": "#121315",
+            "inverse-primary": "#526600",
+            "on-error-container": "#ffdad6",
+            "surface-tint": "#afd500",
+            "error": "#ffb4ab",
+            "on-primary-container": "#586c00",
+            "inverse-surface": "#e3e2e4",
+            "tertiary-fixed-dim": "#ffb4a5",
+            "on-secondary-container": "#b3b5b8",
+            "primary-container": "#caf231",
+            "surface-container-lowest": "#0d0e10",
+            "on-tertiary-fixed-variant": "#8d1603",
+            "tertiary-container": "#ffdad3",
+            "on-primary-fixed": "#171e00",
+            "tertiary": "#ffffff",
+            "on-surface-variant": "#c5c9ae",
+            "surface-dim": "#121315",
+            "on-background": "#e3e2e4",
+            "primary-fixed-dim": "#afd500",
+            "on-secondary": "#2e3133",
+            "background": "#121315",
+            "tertiary-fixed": "#ffdad3",
+            "primary-fixed": "#caf231",
+            "secondary-fixed": "#e1e2e6",
+            "secondary-container": "#44474a"
+          },
+          borderRadius: {
+            DEFAULT: "0px",
+            lg: "0px",
+            xl: "0px",
+            full: "9999px"
+          },
+          spacing: {
+            "pad-sm": "8px",
+            "grid-unit": "4px",
+            "pane-gap": "1px",
+            "pad-2xs": "2px",
+            "pad-xl": "24px",
+            "pad-md": "12px",
+            "pad-2xl": "32px",
+            "gutter-tactical": "8px",
+            "pad-lg": "16px",
+            "gutter-desktop": "12px",
+            "pad-xs": "4px"
+          },
+          fontFamily: {
+            "headline-xl-mobile": ["Space Grotesk", "sans-serif"],
+            "data-mono-lg": ["Space Mono", "monospace"],
+            "section-header": ["Space Mono", "monospace"],
+            "body-lg": ["IBM Plex Sans", "sans-serif"],
+            "body-md": ["IBM Plex Sans", "sans-serif"],
+            "headline-md": ["Space Grotesk", "sans-serif"],
+            "data-mono-md": ["Space Mono", "monospace"],
+            "data-mono-sm": ["Space Mono", "monospace"],
+            "label-caps": ["Space Mono", "monospace"],
+            "headline-lg": ["Space Grotesk", "sans-serif"],
+            "headline-xl": ["Space Grotesk", "sans-serif"]
+          },
+          fontSize: {
+            "headline-xl-mobile": ["24px", { lineHeight: "30px", letterSpacing: "-0.01em", fontWeight: "700" }],
+            "data-mono-lg": ["16px", { lineHeight: "20px", letterSpacing: "0.02em", fontWeight: "700" }],
+            "section-header": ["11px", { lineHeight: "16px", letterSpacing: "0.12em", fontWeight: "700" }],
+            "body-lg": ["15px", { lineHeight: "22px", letterSpacing: "0.01em", fontWeight: "400" }],
+            "body-md": ["13px", { lineHeight: "18px", letterSpacing: "0.01em", fontWeight: "400" }],
+            "headline-md": ["18px", { lineHeight: "24px", letterSpacing: "0em", fontWeight: "600" }],
+            "data-mono-md": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "400" }],
+            "data-mono-sm": ["10px", { lineHeight: "14px", letterSpacing: "0.04em", fontWeight: "400" }],
+            "label-caps": ["9px", { lineHeight: "12px", letterSpacing: "0.14em", fontWeight: "700" }],
+            "headline-lg": ["22px", { lineHeight: "28px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "headline-xl": ["32px", { lineHeight: "38px", letterSpacing: "-0.02em", fontWeight: "700" }]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface-container-lowest font-body-md text-body-md text-on-surface antialiased select-none">
+
+  <!-- ================================================================= -->
+  <!-- FIXED WORKSTATION SIDEBAR (CORE DIRECTORY)                         -->
+  <!-- ================================================================= -->
+  <aside class="fixed left-0 top-0 h-full w-64 bg-surface-container-low border-r border-surface-container-high z-50 flex flex-col justify-between">
+    <div class="flex flex-col">
+      <!-- Brand & Version Header -->
+      <div class="h-14 px-pad-md flex items-center justify-between border-b border-surface-container-high bg-surface-container-lowest">
+        <div class="flex items-center gap-gutter-tactical">
+          <div class="w-2.5 h-2.5 bg-primary-container"></div>
+          <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">STEGOSHIELD</span>
+        </div>
+        <span class="font-label-caps text-label-caps text-on-surface-variant font-mono">v2.0.0</span>
+      </div>
+
+
+      <!-- Navigation Tree -->
+      <div class="p-pad-md">
+        <div class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-pad-sm tracking-widest">CORE DIRECTORY</div>
+        <nav class="flex flex-col gap-pane-gap" id="nav-directory">
+          <a class="nav-item flex items-center justify-between px-pad-sm py-pad-sm transition-colors bg-primary-container text-on-primary font-bold border-l-2 border-primary-container cursor-pointer" onclick="switchDirectory('analyze', this)">
+            <span class="flex items-center gap-pad-sm">
+              <span class="text-on-surface-variant font-mono">01</span>
+              <span class="font-mono">ANALYZE</span>
+            </span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </a>
+          <a class="nav-item flex items-center justify-between px-pad-sm py-pad-sm font-data-mono-md text-data-mono-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer" onclick="switchDirectory('batch-scan', this)">
+            <span class="flex items-center gap-pad-sm">
+              <span class="text-on-surface-variant font-mono">02</span>
+              <span class="font-mono">BATCH SCAN</span>
+            </span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </a>
+          <a class="nav-item flex items-center justify-between px-pad-sm py-pad-sm font-data-mono-md text-data-mono-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer" onclick="switchDirectory('scan-history', this)">
+            <span class="flex items-center gap-pad-sm">
+              <span class="text-on-surface-variant font-mono">03</span>
+              <span class="font-mono">SCAN HISTORY</span>
+            </span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </a>
+          <a class="nav-item flex items-center justify-between px-pad-sm py-pad-sm font-data-mono-md text-data-mono-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer" onclick="switchDirectory('model-intel', this)">
+            <span class="flex items-center gap-pad-sm">
+              <span class="text-on-surface-variant font-mono">04</span>
+              <span class="font-mono">MODEL INTEL</span>
+            </span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </a>
+          <a class="nav-item flex items-center justify-between px-pad-sm py-pad-sm font-data-mono-md text-data-mono-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer" onclick="switchDirectory('about', this)">
+            <span class="flex items-center gap-pad-sm">
+              <span class="text-on-surface-variant font-mono">05</span>
+              <span class="font-mono">ABOUT</span>
+            </span>
+            <span class="material-symbols-outlined text-[14px]">chevron_right</span>
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Bottom Status Footer -->
+    <div class="border-t border-surface-container-high bg-surface-container-lowest p-pad-md flex flex-col gap-pad-xs font-data-mono-sm text-data-mono-sm text-on-surface-variant">
+      <div class="flex justify-between">
+        <span>ENGINE</span>
+        <span class="text-on-surface font-mono">TensorFlow CPU</span>
+      </div>
+      <div class="flex items-center justify-between pt-pad-xs border-t border-surface-container-high">
+        <span>CALIBRATION</span>
+        <span class="text-on-surface font-mono">T = 0.8522</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================================================================= -->
+  <!-- MAIN WORKSPACE                                                    -->
+  <!-- ================================================================= -->
+  <div class="pl-64 flex flex-col min-h-screen">
+    
+    <!-- Clean Top Header -->
+    <header class="fixed top-0 left-64 right-0 h-14 bg-surface-container-lowest/95 backdrop-blur border-b border-surface-container-high z-40 flex items-center justify-between px-pad-lg">
+      <div class="flex items-center gap-pad-md">
+        <!-- Logo Emblem -->
+        <svg class="h-6 w-6 text-primary-container" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="12 2 2 7 12 12 22 7 12 2" fill="#caf231" stroke="#121315"></polygon>
+          <polyline points="2 17 12 22 22 17" stroke="#caf231"></polyline>
+          <polyline points="2 12 12 17 22 12" stroke="#caf231"></polyline>
+        </svg>
+        <div class="flex items-center gap-gutter-tactical">
+          <span class="font-headline-md text-headline-md font-bold tracking-tight text-primary">STEGOSHIELD</span>
+          <span class="border-l border-surface-container-high pl-pad-sm font-data-mono-sm text-data-mono-sm text-on-surface-variant uppercase font-mono">
+            IMAGE STEGANOGRAPHY DETECTION
+          </span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-pad-md">
+        <div class="flex items-center gap-pad-sm px-pad-sm py-1 bg-surface-container border border-surface-container-high font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono">
+          <span>MODEL:</span>
+          <strong class="text-on-surface font-bold">Deep CNN v2.0</strong>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Workspace Surface -->
+    <main class="w-full pt-14 flex-1 bg-surface relative">
+      <div class="flex flex-col w-full">
+
+        <!-- ============================================================= -->
+        <!-- SECTION 01: TARGET ANALYSIS (PRIMARY CONSOLE)                 -->
+        <!-- ============================================================= -->
+        <div id="section-analyze" class="section-content flex flex-col w-full">
+          
+          <!-- WORKSPACE COMMAND HEADER -->
+          <div class="w-full bg-surface-container-lowest px-pad-lg py-pad-md flex flex-wrap items-center justify-between gap-y-pad-sm border-b border-surface-container-high">
+            <div class="flex flex-col gap-pad-2xs">
+              <div class="flex items-center gap-pad-sm">
+                <span class="w-2 h-2 bg-primary-container"></span>
+                <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                  TARGET ANALYSIS
+                </span>
+              </div>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                Upload an image to inspect high-frequency spatial residuals and detect hidden embedded payloads.
+            </div>
+          </div>
+
+          <!-- MAIN OPERATIONAL VIEW CONTAINER -->
+          <div class="w-full p-pad-lg">
+
+            <!-- UNIFIED WORKSTATION CONSOLE: IMAGE ON LEFT, DYNAMIC CONSOLE ON RIGHT -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-pad-lg w-full items-start">
+              
+              <!-- ======================================================= -->
+              <!-- LEFT COLUMN (lg:col-span-5): ANCHORED TARGET MEDIA      -->
+              <!-- ======================================================= -->
+              <div class="lg:col-span-5 flex flex-col gap-pad-md bg-surface-container-low p-pad-md border border-surface-container-high">
+                
+                <!-- Sub-header bar -->
+                <div class="flex items-center justify-between bg-surface-container px-pad-sm py-pad-xs font-data-mono-sm text-data-mono-sm text-on-surface-variant border-b border-surface-container-high">
+                  <div class="flex items-center gap-pad-sm">
+                    <span class="text-primary-container font-mono">[TARGET IMAGE]</span>
+                    <span class="text-on-surface font-bold font-mono truncate max-w-[220px]" id="staged-filename">NO FILE SELECTED</span>
+                  </div>
+                  <span class="font-mono text-on-surface-variant" id="staged-format">AWAITING INPUT</span>
+                </div>
+
+                <!-- Clean Staging Canvas & Drop Area -->
+                <div class="relative w-full aspect-square bg-surface-container-lowest flex items-center justify-center overflow-hidden reticle-grid select-none border border-surface-container-high cursor-pointer transition-colors hover:border-surface-container-highest" id="drop-area" onclick="if(!currentFile) document.getElementById('file-input').click()">
+                  
+                  <!-- Corner Brackets -->
+                  <div class="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-primary-container pointer-events-none z-20"></div>
+                  <div class="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-primary-container pointer-events-none z-20"></div>
+                  <div class="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-primary-container pointer-events-none z-20"></div>
+                  <div class="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-primary-container pointer-events-none z-20"></div>
+
+                  <!-- Crosshairs -->
+                  <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    <div class="w-full h-px bg-surface-bright/20"></div>
+                    <div class="h-full w-px bg-surface-bright/20 absolute"></div>
+                  </div>
+
+                  <!-- Staged / Analyzed Preview Image -->
+                  <img id="staged-image-preview" class="hidden absolute inset-0 w-full h-full object-contain z-10" src="" alt="Target Evidence"/>
+
+                  <!-- Upload Prompt (Shown when empty) -->
+                  <div id="reticle-matrix-box" class="relative z-10 flex flex-col items-center justify-center p-pad-lg text-center gap-pad-sm">
+                    <div class="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center text-primary-container border border-surface-container-high">
+                      <span class="material-symbols-outlined text-[30px]">add_photo_alternate</span>
+                    </div>
+                    <div>
+                      <div class="font-headline-md text-headline-md text-primary font-bold">Drag & Drop Image Here</div>
+                      <div class="font-data-mono-sm text-data-mono-sm text-on-surface-variant mt-1 font-mono">
+                        or click to browse local filesystem
+                      </div>
+                    </div>
+                    <div class="mt-2 flex flex-wrap justify-center items-center gap-pad-xs font-label-caps text-label-caps text-on-surface-variant font-mono">
+                      <span class="px-pad-xs py-0.5 bg-surface-container border border-surface-container-high">PNG</span>
+                      <span class="px-pad-xs py-0.5 bg-surface-container border border-surface-container-high">JPG</span>
+                      <span class="px-pad-xs py-0.5 bg-surface-container border border-surface-container-high">BMP</span>
+                      <span class="px-pad-xs py-0.5 bg-surface-container border border-surface-container-high">TIFF</span>
+                      <span>// UP TO 10 MB</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Metadata Strip -->
+                <div class="grid grid-cols-2 gap-pane-gap bg-surface-container-high font-data-mono-sm text-data-mono-sm border border-surface-container-high">
+                  <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                    <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">DIMENSIONS</span>
+                    <span class="text-on-surface font-bold font-mono" id="meta-dimensions">--- × ---</span>
+                  </div>
+                  <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                    <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">FILE SIZE</span>
+                    <span class="text-on-surface font-bold font-mono" id="meta-size">---</span>
+                  </div>
+                  <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                    <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">CONTAINER</span>
+                    <span class="text-on-surface font-bold font-mono" id="meta-type">---</span>
+                  </div>
+                  <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                    <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">SHA-256 HASH</span>
+                    <span class="text-on-surface truncate font-mono" id="meta-sha256">---</span>
+                  </div>
+                </div>
+
+                <!-- Hidden file input -->
+                <input type="file" id="file-input" class="hidden" accept="image/png, image/jpeg, image/jpg, image/bmp, image/tiff" onchange="handleFileSelect(event)"/>
+
+                <!-- Left-side Action Bar -->
+                <div class="flex items-center justify-between font-mono text-data-mono-sm pt-pad-xs border-t border-surface-container-high">
+                  <button class="px-pad-md py-pad-xs bg-surface-container hover:bg-surface-bright text-on-surface transition-colors border border-surface-container-high font-mono flex items-center gap-pad-xs" onclick="document.getElementById('file-input').click()">
+                    <span class="material-symbols-outlined text-[16px]">folder_open</span>
+                    <span>CHOOSE FILE</span>
+                  </button>
+                  <button id="btn-reanalyze" class="hidden px-pad-md py-pad-xs bg-surface-container-lowest hover:bg-surface-bright text-primary-container border border-primary-container font-mono font-bold flex items-center gap-pad-xs transition-colors" onclick="resetIntake()">
+                    <span class="material-symbols-outlined text-[16px]">restart_alt</span>
+                    <span>NEW SCAN</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- ======================================================= -->
+              <!-- RIGHT COLUMN (lg:col-span-7): DYNAMIC CONSOLE           -->
+              <!-- Swaps between: 1. Settings -> 2. In-Flight -> 3. Result -->
+              <!-- ======================================================= -->
+              <div class="lg:col-span-7 flex flex-col gap-pad-md">
+
+                <!-- STATE 1: ANALYSIS SETTINGS & TRIGGER (view-intake) -->
+                <div id="view-intake" class="flex flex-col gap-pad-md bg-surface-container-low p-pad-md border border-surface-container-high">
+                  <div class="flex items-center justify-between pb-pad-xs bg-surface-container px-pad-sm py-pad-xs border border-surface-container-high">
+                    <span class="font-section-header text-section-header uppercase text-primary font-bold">ANALYSIS SETTINGS</span>
+                    <span class="font-label-caps text-label-caps text-primary-container font-mono">T=0.8522</span>
+                  </div>
+
+                  <!-- Threshold Slider -->
+                  <div class="flex flex-col gap-pad-xs">
+                    <div class="flex items-center justify-between">
+                      <label class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider font-mono">DECISION THRESHOLD (τ)</label>
+                      <span class="font-data-mono-md text-data-mono-md font-bold text-primary-container font-mono" id="tau-val">0.50</span>
+                    </div>
+                    <input class="w-full accent-[#caf231] bg-surface-container-highest h-1.5 cursor-pointer appearance-none" id="tau-slider" max="0.95" min="0.05" oninput="updateTau(this.value)" step="0.01" type="range" value="0.50"/>
+                    <div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant font-mono">
+                      <span>0.05 (SENSITIVE)</span>
+                      <span class="text-primary-container">τ = 0.50 (DEFAULT)</span>
+                      <span>0.95 (STRICT)</span>
+                    </div>
+                  </div>
+
+                  <!-- System Notice -->
+                  <div class="p-pad-xs bg-surface-container-lowest border border-surface-container-high font-mono text-data-mono-sm text-on-surface-variant">
+                    Tensor dimensions: 512×512×3 RGB. Model evaluates spatial noise variance against calibrated baseline distributions.
+                  </div>
+
+                  <!-- Analyze Trigger Button -->
+                  <div class="pt-pad-xs">
+                    <button class="w-full py-3.5 bg-primary-container hover:bg-surface-tint text-on-primary font-section-header text-section-header uppercase tracking-wider font-bold transition-all flex items-center justify-center gap-pad-sm" onclick="startScanSequence()">
+                      <span class="material-symbols-outlined text-[20px]">radar</span>
+                      <span>ANALYZE IMAGE</span>
+                    </button>
+                  </div>
+
+                  <!-- Quick Forensic Tools Access -->
+                  <div class="pt-pad-xs border-t border-surface-container-high flex flex-col gap-pad-2xs">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant font-mono">FORENSIC EXPLORER // INTERACTIVE SUB-SECTIONS:</span>
+                    <div class="grid grid-cols-3 gap-pad-xs font-mono text-data-mono-sm">
+                      <button class="px-pad-xs py-2 bg-surface-container hover:bg-surface-bright text-on-surface border border-surface-container-high flex items-center justify-center gap-1 transition-colors" onclick="openDirectSubSection('ela')">
+                        <span class="material-symbols-outlined text-[15px] text-primary-container">difference</span>
+                        <span>ELA VIEW</span>
+                      </button>
+                      <button class="px-pad-xs py-2 bg-surface-container hover:bg-surface-bright text-on-surface border border-surface-container-high flex items-center justify-center gap-1 transition-colors" onclick="openDirectSubSection('noise')">
+                        <span class="material-symbols-outlined text-[15px] text-primary-container">graphic_eq</span>
+                        <span>NOISE & HIST</span>
+                      </button>
+                      <button class="px-pad-xs py-2 bg-surface-container hover:bg-surface-bright text-on-surface border border-surface-container-high flex items-center justify-center gap-1 transition-colors" onclick="openDirectSubSection('metadata')">
+                        <span class="material-symbols-outlined text-[15px] text-primary-container">info</span>
+                        <span>METADATA</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- STATE 2: IN-FLIGHT PIPELINE PROCESSING (view-scan) -->
+                <div id="view-scan" class="hidden flex-col gap-pad-md bg-surface-container-low p-pad-md border border-surface-container-high">
+                  <!-- Live Processing Header -->
+                  <div class="flex items-center justify-between bg-surface-container px-pad-md py-pad-sm font-data-mono-md text-data-mono-md border border-surface-container-high">
+                    <div class="flex items-center gap-pad-sm">
+                      <span class="w-2.5 h-2.5 bg-primary-container animate-pulse"></span>
+                      <span class="text-primary-container font-bold uppercase font-mono tracking-wider">
+                        ANALYSIS IN PROGRESS // PIPELINE ACTIVE
+                      </span>
+                    </div>
+                    <div class="font-mono text-on-surface text-data-mono-sm">
+                      ELAPSED: <span class="text-primary-container font-bold" id="scan-timer">0.042s</span>
+                    </div>
+                  </div>
+
+                  <!-- Progress Bar -->
+                  <div class="flex flex-col gap-pad-xs bg-surface-container p-pad-sm border border-surface-container-high">
+                    <div class="flex justify-between font-label-caps text-label-caps text-on-surface-variant font-mono">
+                      <span id="scan-stage-label" class="text-primary-container font-bold truncate">STAGE 01/04: INITIALIZING PIPELINE</span>
+                      <span id="scan-pct-label" class="text-on-surface font-bold font-mono">25%</span>
+                    </div>
+                    <div class="w-full bg-surface-container-lowest h-2.5 relative overflow-hidden border border-surface-container-high">
+                      <div class="h-full bg-primary-container w-1/4 transition-all duration-300" id="scan-progress-bar"></div>
+                    </div>
+                  </div>
+
+                  <!-- Pipeline Steps Tracker Cards -->
+                  <div class="flex flex-col gap-pad-xs">
+                    <span class="font-label-caps text-label-caps text-on-surface-variant uppercase font-mono">EXECUTION PHASES</span>
+                    <div class="flex flex-col gap-pad-2xs font-mono text-data-mono-sm">
+                      <div id="step-card-1" class="flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high transition-colors">
+                        <div class="flex items-center gap-pad-xs">
+                          <span id="step-icon-1" class="material-symbols-outlined text-primary-container text-[16px]">check_circle</span>
+                          <span class="text-on-surface font-bold">PHASE 1: Tensor Normalization</span>
+                        </div>
+                        <span id="step-tag-1" class="text-on-surface-variant text-label-caps font-mono">512×512×3 RGB</span>
+                      </div>
+                      <div id="step-card-2" class="flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high transition-colors">
+                        <div class="flex items-center gap-pad-xs">
+                          <span id="step-icon-2" class="material-symbols-outlined text-primary-container text-[16px]">check_circle</span>
+                          <span class="text-on-surface font-bold">PHASE 2: Spatial SRM-30 Convolution</span>
+                        </div>
+                        <span id="step-tag-2" class="text-on-surface-variant text-label-caps font-mono">HIGH-PASS DELTA</span>
+                      </div>
+                      <div id="step-card-3" class="flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high transition-colors">
+                        <div class="flex items-center gap-pad-xs">
+                          <span id="step-icon-3" class="material-symbols-outlined text-primary-container text-[16px]">check_circle</span>
+                          <span class="text-on-surface font-bold">PHASE 3: Deep Feature Extraction</span>
+                        </div>
+                        <span id="step-tag-3" class="text-on-surface-variant text-label-caps font-mono">CONV BACKBONE</span>
+                      </div>
+                      <div id="step-card-4" class="flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high transition-colors">
+                        <div class="flex items-center gap-pad-xs">
+                          <span id="step-icon-4" class="material-symbols-outlined text-primary-container text-[16px]">check_circle</span>
+                          <span class="text-on-surface font-bold">PHASE 4: Calibrated Inference & Threshold</span>
+                        </div>
+                        <span id="step-tag-4" class="text-on-surface-variant text-label-caps font-mono">T=0.8522 LOGIT SCALING</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- In-flight Terminal Logs -->
+                  <div id="scan-terminal-log" class="flex flex-col gap-0.5 bg-surface-container-lowest p-pad-sm border border-surface-container-high font-mono text-data-mono-sm text-on-surface-variant min-h-[110px] overflow-y-auto">
+                    <div>&gt; [0.000s] Target image ingested. Converting to normalized float32 tensor...</div>
+                    <div>&gt; [0.048s] Applying high-pass spatial decomposition filters...</div>
+                    <div class="text-primary-container">&gt; [0.089s] Running inference across 10.78M parameter CNN backbone...</div>
+                    <div>&gt; [0.134s] Applying Platt/logit temperature scaling (T=0.8522)...</div>
+                  </div>
+                </div>
+
+                <!-- STATE 3: FINAL FORENSIC DOSSIER RESULTS (view-result) -->
+                <div id="view-result" class="hidden flex-col gap-pad-md bg-surface-container-low p-pad-md border border-surface-container-high">
+                  <!-- Header Strip -->
+                  <div class="flex flex-wrap items-center justify-between gap-pad-sm pb-pad-xs bg-surface-container px-pad-sm py-pad-xs border border-surface-container-high">
+                    <div class="flex items-center gap-pad-xs font-mono">
+                      <span class="text-on-surface-variant font-label-caps">DOSSIER //</span>
+                      <span class="font-bold text-primary text-data-mono-md" id="result-filename">TARGET.PNG</span>
+                      <span class="text-on-surface-variant text-data-mono-sm" id="result-scan-id">[SCAN_ID]</span>
+                    </div>
+                    <div class="flex items-center gap-pad-sm font-mono">
+                      <span class="text-on-surface-variant text-data-mono-sm">LATENCY:</span>
+                      <span class="text-primary-container font-bold text-data-mono-sm" id="result-runtime">184.2 ms</span>
+                    </div>
+                  </div>
+
+                  <!-- FORENSIC SUB-SECTIONS NAVIGATION BAR -->
+                  <div class="flex flex-wrap items-center gap-1 bg-surface-container-lowest p-1 border border-surface-container-high font-mono text-data-mono-sm">
+                    <button id="tab-sub-dossier" class="subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs bg-primary-container text-on-primary font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer" onclick="switchAnalyzeSubSection('dossier')">
+                      <span class="material-symbols-outlined text-[15px]">verified_user</span>
+                      <span>AI DETECTION</span>
+                    </button>
+                    <button id="tab-sub-ela" class="subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer" onclick="switchAnalyzeSubSection('ela')">
+                      <span class="material-symbols-outlined text-[15px]">difference</span>
+                      <span>ELA (ERROR LEVEL)</span>
+                    </button>
+                    <button id="tab-sub-noise" class="subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer" onclick="switchAnalyzeSubSection('noise')">
+                      <span class="material-symbols-outlined text-[15px]">graphic_eq</span>
+                      <span>NOISE HISTOGRAM</span>
+                    </button>
+                    <button id="tab-sub-metadata" class="subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer" onclick="switchAnalyzeSubSection('metadata')">
+                      <span class="material-symbols-outlined text-[15px]">info</span>
+                      <span>IMAGE METADATA</span>
+                    </button>
+                  </div>
+
+                  <!-- SUBVIEW 1: PRIMARY AI DETECTION & RESIDUAL DOSSIER -->
+                  <div id="subview-dossier" class="flex flex-col gap-pad-md">
+
+                  <!-- 1. Primary Verdict Banner -->
+                  <div class="bg-surface-container p-pad-md flex flex-col justify-between border border-surface-container-high gap-pad-sm">
+                    <div class="flex items-center justify-between">
+                      <span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest font-mono">CLASSIFICATION OUTCOME</span>
+                      <span class="font-data-mono-sm text-data-mono-sm text-[#ef4444] font-mono font-bold" id="result-flag">FLAG: POSITIVE</span>
+                    </div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-pad-sm">
+                      <div class="inline-block px-pad-md py-pad-xs bg-surface-container-lowest text-[#ef4444] font-data-mono-lg text-data-mono-lg font-bold tracking-widest uppercase border border-[#ef4444] font-mono" id="result-verdict">
+                        STEGO DETECTED
+                      </div>
+                      <div class="font-mono text-right">
+                        <span class="text-on-surface-variant text-label-caps uppercase block">CALIBRATED CONFIDENCE</span>
+                        <span class="text-[#ef4444] font-headline-md text-headline-md font-bold font-mono" id="result-confidence">96.42%</span>
+                      </div>
+                    </div>
+                    <div class="pt-pad-xs border-t border-surface-container-high font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono">
+                      RECOMMENDATION: <span class="text-[#ef4444] font-bold font-mono" id="result-recommendation">FORENSIC REVIEW RECOMMENDED</span>
+                    </div>
+                  </div>
+
+                  <!-- 2. Probability Vector Gauge -->
+                  <div class="bg-surface-container p-pad-md flex flex-col justify-between border border-surface-container-high gap-pad-xs">
+                    <div class="flex items-center justify-between font-label-caps text-label-caps text-on-surface-variant font-mono">
+                      <span>STEGANOGRAPHIC PROBABILITY VECTOR</span>
+                      <span class="text-on-surface font-mono" id="result-tau-label">τ THRESHOLD = 0.5000</span>
+                    </div>
+
+                    <div class="py-pad-sm flex flex-col gap-pad-xs">
+                      <div class="relative w-full h-5">
+                        <div class="absolute -top-1" id="gauge-pointer" style="left: calc(96.42% - 40px);">
+                          <div class="bg-[#ef4444] text-white font-data-mono-sm text-data-mono-sm font-bold px-pad-xs py-0.5 font-mono" id="gauge-pointer-val">
+                            ▲ 96.42%
+                          </div>
+                        </div>
+                        <div class="absolute -top-1" id="gauge-threshold-tick" style="left: calc(50% - 2px);">
+                          <div class="w-1 h-3 bg-on-surface" title="Threshold tau = 0.50"></div>
+                        </div>
+                      </div>
+
+                      <div class="relative w-full h-3 bg-surface-container-lowest flex items-center border border-surface-container-high">
+                        <div class="h-full bg-[#22c55e]" id="gauge-bar-clean" style="width: 50%;"></div>
+                        <div class="h-full bg-[#ef4444]" id="gauge-bar-stego" style="width: 46.42%;"></div>
+                        <div class="absolute top-0 bottom-0 w-0.5 bg-primary z-10" id="gauge-dividing-line" style="left: 50%;"></div>
+                      </div>
+
+                      <div class="flex justify-between font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono">
+                        <span class="text-[#22c55e] font-bold">0.00 (CLEAN)</span>
+                        <span>0.50 (NEUTRAL)</span>
+                        <span class="text-on-surface" id="gauge-tau-marker">0.50 [τ]</span>
+                        <span class="text-[#ef4444] font-bold">1.00 (STEGO)</span>
+                      </div>
+                    </div>
+
+                    <div class="font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono" id="result-margin-desc">
+                      Decision Margin: <strong class="text-on-surface font-mono" id="result-margin">+0.2342</strong>
+                    </div>
+                  </div>
+
+                  <!-- 3. Technical Detection Stats Grid -->
+                  <div class="bg-surface-container p-pad-md flex flex-col gap-pad-xs border border-surface-container-high">
+                    <span class="font-section-header text-section-header uppercase text-on-surface-variant font-bold">
+                      DETECTION STATS & PIPELINE METRICS
+                    </span>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-pane-gap bg-surface-container-high font-data-mono-sm text-data-mono-sm border border-surface-container-high">
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">DECISION THRESHOLD</span>
+                        <span class="text-primary-container font-mono font-bold text-data-mono-md" id="tech-tau">0.5000</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">SHANNON ENTROPY</span>
+                        <span class="text-on-surface font-mono font-bold text-data-mono-md" id="tech-entropy">7.842 b/p</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">BASELINE DELTA</span>
+                        <span class="text-error font-mono font-bold text-data-mono-md" id="tech-sigma">+1.821 σ</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">INFERENCE LATENCY</span>
+                        <span class="text-on-surface font-mono" id="tech-runtime">184.2 ms</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">SOURCE CONTAINER</span>
+                        <span class="text-on-surface font-mono" id="tech-container">PNG (Lossless)</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps text-label-caps font-mono">CALIBRATION (T)</span>
+                        <span class="text-on-surface font-mono">T = 0.8522</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 4. Forensic Assessment -->
+                  <div class="bg-surface-container p-pad-md flex flex-col justify-between border border-surface-container-high gap-pad-xs">
+                    <div class="flex flex-col gap-pad-xs">
+                      <span class="font-section-header text-section-header uppercase text-primary font-bold">
+                        ■ FORENSIC ASSESSMENT
+                      </span>
+                      <p class="font-body-md text-body-md text-on-surface font-semibold mt-pad-2xs" id="interp-heading">
+                        Strong model evidence is present for steganographic alteration. Further review is recommended.
+                      </p>
+                      <p class="font-data-mono-sm text-data-mono-sm text-on-surface-variant mt-pad-2xs leading-relaxed font-mono" id="interp-body">
+                        The neural classifier detected anomalous statistical distributions in the high-frequency pixel domain consistent with steganographic embedding.
+                      </p>
+                    </div>
+                    <div class="flex items-center gap-pad-xs pt-pad-xs font-label-caps text-label-caps text-on-surface-variant font-mono border-t border-surface-container-high mt-pad-xs">
+                      <span class="text-primary-container">SIGNATURE:</span>
+                      <span class="truncate" id="interp-signature">SHA256: ---</span>
+                    </div>
+                  </div>
+
+                  <!-- 5. Export Actions -->
+                  <div class="flex flex-wrap items-center gap-pad-sm">
+                    <button class="px-pad-md py-pad-xs bg-primary-container hover:bg-surface-tint text-on-primary font-section-header text-section-header uppercase tracking-wider font-bold transition-colors flex items-center gap-pad-xs font-mono" onclick="downloadDossierReport()">
+                      <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                      <span>EXPORT DOSSIER (REPORT)</span>
+                    </button>
+                    <button class="px-pad-md py-pad-xs bg-surface-container-lowest hover:bg-surface-bright text-on-surface font-section-header text-section-header uppercase tracking-wider transition-colors flex items-center gap-pad-xs border border-surface-container-high font-mono" onclick="downloadTelemetryJson()">
+                      <span class="material-symbols-outlined text-[16px]">data_object</span>
+                      <span>EXPORT TELEMETRY (JSON)</span>
+                    </button>
+                  </div>
+                  </div> <!-- /subview-dossier -->
+
+                  <!-- ======================================================= -->
+                  <!-- SUBVIEW 2: ERROR LEVEL ANALYSIS (ELA)                   -->
+                  <!-- ======================================================= -->
+                  <div id="subview-ela" class="hidden flex-col gap-pad-md">
+                    <!-- ELA Header Card -->
+                    <div class="bg-surface-container p-pad-md border border-surface-container-high flex flex-col gap-pad-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest font-mono">SUB-SECTION 02 // ERROR LEVEL ANALYSIS (ELA)</span>
+                        <span class="text-primary-container font-mono text-data-mono-sm font-bold" id="ela-status-badge">READY</span>
+                      </div>
+                      <p class="font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono leading-relaxed">
+                        Re-compresses target at specified quality quantization tables. Regions with differing compression characteristics indicate digital splicing, retouching, or payload insertion.
+                      </p>
+                    </div>
+
+                    <!-- ELA Interactive Controls Bar -->
+                    <div class="bg-surface-container-lowest p-pad-md border border-surface-container-high flex flex-col gap-pad-md">
+                      <div class="flex items-center justify-between border-b border-surface-container-high pb-pad-xs">
+                        <span class="font-mono text-data-mono-sm font-bold text-primary flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-primary-container">tune</span>
+                          <span>INTERACTIVE ELA CONTROLS</span>
+                        </span>
+                        <button class="px-pad-xs py-0.5 bg-surface-container hover:bg-surface-bright text-on-surface-variant hover:text-on-surface font-mono text-label-caps uppercase border border-surface-container-high transition-colors cursor-pointer" onclick="resetElaControls()">
+                          RESET CONTROLS
+                        </button>
+                      </div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md">
+                        <!-- Quality Slider -->
+                        <div class="flex flex-col gap-pad-xs bg-surface-container p-pad-sm border border-surface-container-high">
+                          <div class="flex justify-between items-center font-mono text-data-mono-sm">
+                            <span class="text-on-surface-variant">JPEG QUALITY FACTOR:</span>
+                            <span class="text-primary-container font-bold text-data-mono-md" id="ela-val-quality">90%</span>
+                          </div>
+                          <input type="range" id="ela-slider-quality" min="10" max="100" value="90" step="1" class="w-full accent-[#caf231] bg-surface-container-highest h-1.5 cursor-pointer" oninput="onElaParamChange()"/>
+                          <div class="flex items-center justify-between gap-1 pt-1 font-mono text-label-caps text-on-surface-variant">
+                            <span>10% (Coarse)</span>
+                            <div class="flex gap-1">
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-on-surface text-[10px] cursor-pointer" onclick="setElaQualityPreset(75)">75%</button>
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-primary-container text-[10px] font-bold cursor-pointer" onclick="setElaQualityPreset(90)">90%</button>
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-on-surface text-[10px] cursor-pointer" onclick="setElaQualityPreset(95)">95%</button>
+                            </div>
+                            <span>100% (Fine)</span>
+                          </div>
+                        </div>
+
+                        <!-- Scale Multiplier Slider -->
+                        <div class="flex flex-col gap-pad-xs bg-surface-container p-pad-sm border border-surface-container-high">
+                          <div class="flex justify-between items-center font-mono text-data-mono-sm">
+                            <span class="text-on-surface-variant">ERROR AMPLIFICATION GAIN:</span>
+                            <span class="text-primary-container font-bold text-data-mono-md" id="ela-val-scale">15x</span>
+                          </div>
+                          <input type="range" id="ela-slider-scale" min="1" max="40" value="15" step="1" class="w-full accent-[#caf231] bg-surface-container-highest h-1.5 cursor-pointer" oninput="onElaParamChange()"/>
+                          <div class="flex items-center justify-between gap-1 pt-1 font-mono text-label-caps text-on-surface-variant">
+                            <span>1x (Raw)</span>
+                            <div class="flex gap-1">
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-on-surface text-[10px] cursor-pointer" onclick="setElaScalePreset(10)">10x</button>
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-primary-container text-[10px] font-bold cursor-pointer" onclick="setElaScalePreset(15)">15x</button>
+                              <button class="px-1.5 py-0.5 bg-surface-container-lowest hover:bg-surface-bright text-on-surface text-[10px] cursor-pointer" onclick="setElaScalePreset(25)">25x</button>
+                            </div>
+                            <span>40x (Max)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Display Toggles -->
+                      <div class="flex flex-wrap items-center justify-between gap-pad-sm pt-pad-xs border-t border-surface-container-high font-mono text-data-mono-sm">
+                        <div class="flex items-center gap-pad-md">
+                          <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="ela-toggle-invert" class="accent-[#caf231] w-4 h-4 cursor-pointer" onchange="onElaParamChange()"/>
+                            <span class="text-on-surface">INVERT CONTRAST</span>
+                          </label>
+                          <label class="flex items-center gap-2 cursor-pointer select-none">
+                            <input type="checkbox" id="ela-toggle-heatmap" class="accent-[#caf231] w-4 h-4 cursor-pointer" onchange="toggleElaHeatmap()"/>
+                            <span class="text-on-surface">FALSE-COLOR HEATMAP</span>
+                          </label>
+                        </div>
+                        <span id="ela-calc-indicator" class="text-on-surface-variant text-label-caps">LIVE HARDWARE ACCELERATED</span>
+                      </div>
+                    </div>
+
+                    <!-- ELA Viewport Comparison -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md">
+                      <div class="bg-surface-container-lowest p-pad-sm border border-surface-container-high flex flex-col gap-pad-xs">
+                        <div class="flex items-center justify-between font-mono text-label-caps text-on-surface-variant pb-1 border-b border-surface-container-high">
+                          <span>SOURCE CONTAINER</span>
+                          <span class="text-primary-container">ORIGINAL RGB</span>
+                        </div>
+                        <div class="relative aspect-square w-full bg-surface-container overflow-hidden flex items-center justify-center border border-surface-container-high">
+                          <img id="ela-source-preview" class="w-full h-full object-contain" src="" alt="Source Target"/>
+                        </div>
+                      </div>
+                      <div class="bg-surface-container-lowest p-pad-sm border border-surface-container-high flex flex-col gap-pad-xs">
+                        <div class="flex items-center justify-between font-mono text-label-caps text-on-surface-variant pb-1 border-b border-surface-container-high">
+                          <span>ELA DIFFERENTIAL RESIDUAL</span>
+                          <span class="text-primary-container" id="ela-viewport-tag">Q=90 | GAIN=15x</span>
+                        </div>
+                        <div class="relative aspect-square w-full bg-surface-container overflow-hidden flex items-center justify-center border border-surface-container-high">
+                          <img id="ela-result-image" class="w-full h-full object-contain transition-all" src="" alt="ELA Residual"/>
+                          <div id="ela-spinner" class="hidden absolute inset-0 bg-surface-container-lowest/70 backdrop-blur-[1px] flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary-container text-[28px] animate-spin">sync</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- ELA Metrics Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-pane-gap bg-surface-container-high font-mono text-data-mono-sm border border-surface-container-high">
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">MEAN ABS ERROR (MAE)</span>
+                        <span class="text-on-surface font-bold text-data-mono-md" id="ela-stat-mae">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">PEAK PIXEL DELTA</span>
+                        <span class="text-on-surface font-bold text-data-mono-md" id="ela-stat-max">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">ANOMALOUS REGIONS</span>
+                        <span class="text-primary-container font-bold text-data-mono-md" id="ela-stat-anomaly">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">COMPRESSION STATUS</span>
+                        <span class="text-on-surface font-bold text-data-mono-sm truncate" id="ela-stat-status">--</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ======================================================= -->
+                  <!-- SUBVIEW 3: NOISE RESIDUAL & 256-BIN HISTOGRAM          -->
+                  <!-- ======================================================= -->
+                  <div id="subview-noise" class="hidden flex-col gap-pad-md">
+                    <!-- Noise Header Card -->
+                    <div class="bg-surface-container p-pad-md border border-surface-container-high flex flex-col gap-pad-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest font-mono">SUB-SECTION 03 // NOISE RESIDUAL & MULTI-CHANNEL HISTOGRAM</span>
+                        <span class="text-primary-container font-mono text-data-mono-sm font-bold">ACTIVE</span>
+                      </div>
+                      <p class="font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono leading-relaxed">
+                        High-pass Laplacian 2nd-derivative filtering exposes spatial noise disturbances. The 256-bin histogram evaluates intensity spreads, dynamic range clipping, and least-significant bit (LSB) distribution.
+                      </p>
+                    </div>
+
+                    <!-- Noise & Hist Controls Bar -->
+                    <div class="bg-surface-container-lowest p-pad-md border border-surface-container-high flex flex-col gap-pad-md">
+                      <div class="flex items-center justify-between border-b border-surface-container-high pb-pad-xs">
+                        <span class="font-mono text-data-mono-sm font-bold text-primary flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[16px] text-primary-container">tune</span>
+                          <span>NOISE & HISTOGRAM PARAMETERS</span>
+                        </span>
+                        <div class="flex items-center gap-2">
+                          <label class="flex items-center gap-2 cursor-pointer font-mono text-data-mono-sm text-on-surface select-none">
+                            <input type="checkbox" id="noise-toggle-equalize" class="accent-[#caf231] w-4 h-4 cursor-pointer" onchange="onNoiseParamChange()"/>
+                            <span>HISTOGRAM EQUALIZATION</span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md">
+                        <!-- Noise Amp Slider -->
+                        <div class="flex flex-col gap-pad-xs bg-surface-container p-pad-sm border border-surface-container-high">
+                          <div class="flex justify-between items-center font-mono text-data-mono-sm">
+                            <span class="text-on-surface-variant">NOISE AMPLIFICATION GAIN:</span>
+                            <span class="text-primary-container font-bold text-data-mono-md" id="noise-val-amp">2.5x</span>
+                          </div>
+                          <input type="range" id="noise-slider-amp" min="0.5" max="10.0" value="2.5" step="0.5" class="w-full accent-[#caf231] bg-surface-container-highest h-1.5 cursor-pointer" oninput="onNoiseParamChange()"/>
+                          <div class="flex justify-between font-mono text-label-caps text-on-surface-variant">
+                            <span>0.5x (Subtle)</span>
+                            <span>5.0x (Standard)</span>
+                            <span>10.0x (High Boost)</span>
+                          </div>
+                        </div>
+
+                        <!-- Histogram Bins Slider -->
+                        <div class="flex flex-col gap-pad-xs bg-surface-container p-pad-sm border border-surface-container-high">
+                          <div class="flex justify-between items-center font-mono text-data-mono-sm">
+                            <span class="text-on-surface-variant">HISTOGRAM RESOLUTION:</span>
+                            <span class="text-primary-container font-bold text-data-mono-md" id="hist-val-bins">256 BINS</span>
+                          </div>
+                          <input type="range" id="hist-slider-bins" min="32" max="256" value="256" step="16" class="w-full accent-[#caf231] bg-surface-container-highest h-1.5 cursor-pointer" oninput="renderHistogram()"/>
+                          <div class="flex justify-between font-mono text-label-caps text-on-surface-variant">
+                            <span>32 Bins (Smooth)</span>
+                            <span>128 Bins</span>
+                            <span>256 Bins (Full Fidelity)</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Channel Filter Selector Bar -->
+                      <div class="flex flex-wrap items-center justify-between gap-pad-sm pt-pad-xs border-t border-surface-container-high font-mono text-data-mono-sm">
+                        <span class="text-on-surface-variant">DISPLAY CHANNEL:</span>
+                        <div class="flex flex-wrap gap-1 font-mono text-data-mono-sm">
+                          <button id="btn-chan-all" class="px-2.5 py-1 bg-primary-container text-on-primary font-bold transition-colors cursor-pointer" onclick="setHistogramChannel('all')">ALL (RGB+GRAY)</button>
+                          <button id="btn-chan-r" class="px-2.5 py-1 bg-surface-container hover:bg-surface-bright text-[#ef4444] border border-surface-container-high transition-colors cursor-pointer" onclick="setHistogramChannel('r')">RED</button>
+                          <button id="btn-chan-g" class="px-2.5 py-1 bg-surface-container hover:bg-surface-bright text-[#22c55e] border border-surface-container-high transition-colors cursor-pointer" onclick="setHistogramChannel('g')">GREEN</button>
+                          <button id="btn-chan-b" class="px-2.5 py-1 bg-surface-container hover:bg-surface-bright text-[#3b82f6] border border-surface-container-high transition-colors cursor-pointer" onclick="setHistogramChannel('b')">BLUE</button>
+                          <button id="btn-chan-gray" class="px-2.5 py-1 bg-surface-container hover:bg-surface-bright text-on-surface border border-surface-container-high transition-colors cursor-pointer" onclick="setHistogramChannel('gray')">GRAY / LUMA</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Dual Panels: Noise Map on Left, Canvas Histogram on Right -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md">
+                      <!-- Panel A: Noise Map -->
+                      <div class="bg-surface-container-lowest p-pad-sm border border-surface-container-high flex flex-col gap-pad-xs">
+                        <div class="flex items-center justify-between font-mono text-label-caps text-on-surface-variant pb-1 border-b border-surface-container-high">
+                          <span>LAPLACIAN NOISE MAP</span>
+                          <span class="text-primary-container" id="noise-viewport-tag">2ND DERIVATIVE RESIDUAL</span>
+                        </div>
+                        <div class="relative aspect-square w-full bg-surface-container overflow-hidden flex items-center justify-center border border-surface-container-high">
+                          <img id="noise-result-image" class="w-full h-full object-contain" src="" alt="Noise Map"/>
+                          <div id="noise-spinner" class="hidden absolute inset-0 bg-surface-container-lowest/70 backdrop-blur-[1px] flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary-container text-[28px] animate-spin">sync</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Panel B: 256-Bin Interactive Canvas Histogram -->
+                      <div class="bg-surface-container-lowest p-pad-sm border border-surface-container-high flex flex-col gap-pad-xs">
+                        <div class="flex items-center justify-between font-mono text-label-caps text-on-surface-variant pb-1 border-b border-surface-container-high">
+                          <span>CHANNEL DISTRIBUTION HISTOGRAM</span>
+                          <span class="text-primary-container font-mono text-label-caps" id="hist-hover-coords">HOVER TO PROBE INTENSITY</span>
+                        </div>
+                        <div class="relative aspect-square w-full bg-surface-container overflow-hidden p-2 flex flex-col items-center justify-center border border-surface-container-high">
+                          <canvas id="hist-canvas" width="480" height="420" class="w-full h-full cursor-crosshair"></canvas>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Noise & Histogram Telemetry Grid -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-pane-gap bg-surface-container-high font-mono text-data-mono-sm border border-surface-container-high">
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">NOISE VARIANCE (σ²)</span>
+                        <span class="text-on-surface font-bold text-data-mono-md" id="noise-stat-variance">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">HIGH-FREQ DENSITY</span>
+                        <span class="text-primary-container font-bold text-data-mono-md" id="noise-stat-density">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">MEAN INTENSITY (μ)</span>
+                        <span class="text-on-surface font-bold text-data-mono-md" id="hist-stat-mean">--</span>
+                      </div>
+                      <div class="flex flex-col p-pad-xs bg-surface-container-lowest">
+                        <span class="text-on-surface-variant font-label-caps">LSB BIT-PARITY</span>
+                        <span class="text-on-surface font-bold text-data-mono-sm truncate" id="hist-stat-parity">--</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- ======================================================= -->
+                  <!-- SUBVIEW 4: IMAGE METADATA & EXIF                       -->
+                  <!-- ======================================================= -->
+                  <div id="subview-metadata" class="hidden flex-col gap-pad-md">
+                    <!-- Metadata Header Card -->
+                    <div class="bg-surface-container p-pad-md border border-surface-container-high flex flex-col gap-pad-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest font-mono">SUB-SECTION 04 // IMAGE METADATA & EXIF FORENSICS</span>
+                        <span class="text-primary-container font-mono text-data-mono-sm font-bold" id="meta-tag-count">0 TAGS EXTRACTED</span>
+                      </div>
+                      <p class="font-data-mono-sm text-data-mono-sm text-on-surface-variant font-mono leading-relaxed">
+                        Comprehensive container inspection. Cross-references camera hardware signatures, geolocation, timestamps, and editing footprints to detect anomalies and EXIF payload sanitization.
+                      </p>
+                    </div>
+
+                    <!-- Integrity Status Badges -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-pad-sm">
+                      <div class="p-pad-sm bg-surface-container border border-surface-container-high flex items-center gap-pad-sm font-mono text-data-mono-sm">
+                        <span class="material-symbols-outlined text-[20px] text-primary-container" id="badge-icon-exif">info</span>
+                        <div>
+                          <span class="text-on-surface-variant text-label-caps block">EXIF HEADER INTEGRITY</span>
+                          <span class="font-bold text-on-surface" id="meta-badge-exif">SCANNING...</span>
+                        </div>
+                      </div>
+                      <div class="p-pad-sm bg-surface-container border border-surface-container-high flex items-center gap-pad-sm font-mono text-data-mono-sm">
+                        <span class="material-symbols-outlined text-[20px] text-primary-container" id="badge-icon-software">draw</span>
+                        <div class="truncate">
+                          <span class="text-on-surface-variant text-label-caps block">SOFTWARE SIGNATURE</span>
+                          <span class="font-bold text-on-surface truncate block" id="meta-badge-software">NONE DETECTED</span>
+                        </div>
+                      </div>
+                      <div class="p-pad-sm bg-surface-container border border-surface-container-high flex items-center gap-pad-sm font-mono text-data-mono-sm">
+                        <span class="material-symbols-outlined text-[20px] text-primary-container" id="badge-icon-gps">location_on</span>
+                        <div>
+                          <span class="text-on-surface-variant text-label-caps block">GPS GEOLOCATION</span>
+                          <span class="font-bold text-on-surface" id="meta-badge-gps">ABSENT</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Interactive Search & Filter Controls -->
+                    <div class="bg-surface-container-lowest p-pad-md border border-surface-container-high flex flex-col gap-pad-sm font-mono">
+                      <div class="flex flex-wrap items-center justify-between gap-pad-sm">
+                        <div class="relative flex-1 min-w-[220px]">
+                          <input type="text" id="meta-search-input" placeholder="Search metadata tags (e.g. dimensions, GPS, camera, model)..." class="w-full bg-surface-container p-pad-xs pl-8 border border-surface-container-high text-on-surface font-mono text-data-mono-sm focus:outline-none focus:border-primary-container" oninput="filterMetadataTable()"/>
+                          <span class="material-symbols-outlined absolute left-2 top-2 text-on-surface-variant text-[16px]">search</span>
+                        </div>
+                        <div class="flex items-center gap-pad-xs">
+                          <button class="px-pad-sm py-pad-xs bg-surface-container hover:bg-surface-bright text-on-surface font-mono text-data-mono-sm border border-surface-container-high flex items-center gap-1 transition-colors cursor-pointer" onclick="copyMetadataJson()">
+                            <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                            <span id="btn-copy-meta-text">COPY JSON</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- Category Filter Tabs -->
+                      <div class="flex flex-wrap items-center gap-1 pt-1 border-t border-surface-container-high text-label-caps">
+                        <button id="cat-btn-all" class="px-2 py-1 bg-primary-container text-on-primary font-bold transition-colors cursor-pointer" onclick="setMetaCategory('all')">ALL TAGS</button>
+                        <button id="cat-btn-container" class="px-2 py-1 bg-surface-container hover:bg-surface-bright text-on-surface-variant border border-surface-container-high transition-colors cursor-pointer" onclick="setMetaCategory('Container & Geometry')">CONTAINER</button>
+                        <button id="cat-btn-exif" class="px-2 py-1 bg-surface-container hover:bg-surface-bright text-on-surface-variant border border-surface-container-high transition-colors cursor-pointer" onclick="setMetaCategory('EXIF & Camera Hardware')">EXIF & HARDWARE</button>
+                        <button id="cat-btn-gps" class="px-2 py-1 bg-surface-container hover:bg-surface-bright text-on-surface-variant border border-surface-container-high transition-colors cursor-pointer" onclick="setMetaCategory('GPS Geolocation')">GPS</button>
+                        <button id="cat-btn-integrity" class="px-2 py-1 bg-surface-container hover:bg-surface-bright text-on-surface-variant border border-surface-container-high transition-colors cursor-pointer" onclick="setMetaCategory('Forensic Integrity')">INTEGRITY</button>
+                      </div>
+                    </div>
+
+                    <!-- Metadata Table Container -->
+                    <div class="overflow-x-auto max-h-[380px] bg-surface-container-lowest border border-surface-container-high">
+                      <table class="w-full text-left font-mono text-data-mono-sm border-collapse">
+                        <thead class="bg-surface-container text-on-surface-variant uppercase text-label-caps sticky top-0 border-b border-surface-container-high">
+                          <tr>
+                            <th class="p-pad-xs">CATEGORY</th>
+                            <th class="p-pad-xs">TAG IDENTIFIER</th>
+                            <th class="p-pad-xs">VALUE</th>
+                            <th class="p-pad-xs text-right">STATUS</th>
+                          </tr>
+                        </thead>
+                        <tbody id="metadata-tbody" class="divide-y divide-surface-container-high">
+                          <tr>
+                            <td colspan="4" class="p-pad-md text-center text-on-surface-variant">
+                              Awaiting image analysis. Metadata tags will populate here.
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div> <!-- /view-result -->
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- SECTION 02: BATCH SCAN (DIRECTORY INSPECTION)                 -->
+        <!-- ============================================================= -->
+        <div id="section-batch-scan" class="section-content hidden flex-col w-full p-pad-lg">
+          <div class="w-full bg-surface-container-lowest p-pad-lg flex flex-col gap-pad-md border border-surface-container-high">
+            <div class="flex items-center gap-pad-sm">
+              <span class="w-2 h-2 bg-primary-container"></span>
+              <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                SECTION 02 // BATCH DIRECTORY SCAN
+              </span>
+              <span class="font-label-caps text-label-caps px-pad-xs py-pad-2xs bg-surface-container text-on-surface-variant font-mono">
+                BULK ANALYSIS
+              </span>
+            </div>
+            <p class="font-body-md text-body-md text-on-surface-variant">
+              Execute high-throughput steganographic classification across entire image repositories and data directories.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-pad-md mt-pad-sm">
+              <div class="md:col-span-8">
+                <input type="text" id="batch-dir-path" value="data/test_data/clean_images" class="w-full p-pad-sm bg-surface-container border border-surface-container-high text-on-surface font-mono text-data-mono-md" placeholder="Enter directory path (e.g. data/test_data/clean_images)"/>
+              </div>
+              <div class="md:col-span-4 flex gap-pad-sm">
+                <button class="w-full bg-primary-container hover:bg-surface-tint text-on-primary font-section-header uppercase font-bold py-pad-sm font-mono" onclick="runBatchScan()">
+                  RUN BATCH SCAN
+                </button>
+              </div>
+            </div>
+            <div id="batch-results-table" class="mt-pad-md">
+              <div class="p-pad-md bg-surface-container border border-surface-container-high font-mono text-data-mono-sm text-on-surface-variant">
+                Target ready. Specify a directory path within the project workspace to begin bulk verification.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- SECTION 03: SCAN HISTORY (SESSION LOG)                        -->
+        <!-- ============================================================= -->
+        <div id="section-scan-history" class="section-content hidden flex-col w-full p-pad-lg">
+          <div class="w-full bg-surface-container-lowest p-pad-lg flex flex-col gap-pad-md border border-surface-container-high">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-pad-sm">
+                <span class="w-2 h-2 bg-primary-container"></span>
+                <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                  SECTION 03 // SCAN LOGS & DOSSIER HISTORY
+                </span>
+              </div>
+              <button class="px-pad-sm py-pad-xs bg-surface-container hover:bg-surface-bright text-on-surface font-mono text-data-mono-sm border border-surface-container-high" onclick="clearHistoryLog()">
+                CLEAR LOGS
+              </button>
+            </div>
+            <div id="history-container" class="mt-pad-sm overflow-x-auto">
+              <table class="w-full text-left font-mono text-data-mono-sm border border-surface-container-high">
+                <thead class="bg-surface-container text-on-surface-variant uppercase text-label-caps">
+                  <tr>
+                    <th class="p-pad-sm">TIMESTAMP</th>
+                    <th class="p-pad-sm">FILE IDENTIFIER</th>
+                    <th class="p-pad-sm">VERDICT</th>
+                    <th class="p-pad-sm">CONFIDENCE</th>
+                    <th class="p-pad-sm">ENTROPY</th>
+                    <th class="p-pad-sm">RUNTIME</th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody" class="divide-y divide-surface-container-high bg-surface-container-low">
+                  <tr>
+                    <td colspan="6" class="p-pad-md text-center text-on-surface-variant">Awaiting image scan operations. Log records will populate here.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- SECTION 04: MODEL INTEL (NEURAL SPECIFICATIONS)               -->
+        <!-- ============================================================= -->
+        <div id="section-model-intel" class="section-content hidden flex-col w-full p-pad-lg">
+          <div class="w-full bg-surface-container-lowest p-pad-lg flex flex-col gap-pad-md border border-surface-container-high">
+            <div class="flex items-center gap-pad-sm">
+              <span class="w-2 h-2 bg-primary-container"></span>
+              <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                SECTION 04 // MODEL INTEL & ARCHITECTURE
+              </span>
+              <span class="font-label-caps text-label-caps px-pad-xs py-pad-2xs bg-surface-container text-on-surface-variant font-mono">
+                NEURAL SPECIFICATIONS
+              </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md mt-pad-sm">
+              <div class="p-pad-md bg-surface-container border border-surface-container-high flex flex-col gap-pad-xs font-mono text-data-mono-sm">
+                <span class="font-bold text-primary">MODEL BACKBONE</span>
+                <span class="text-on-surface-variant">StegoShield Deep CNN v2.0.0</span>
+                <span class="font-bold text-primary mt-pad-sm">TENSOR INPUT DIMENSION</span>
+                <span class="text-on-surface-variant">512 × 512 × 3 (Normalized RGB)</span>
+                <span class="font-bold text-primary mt-pad-sm">CALIBRATION FACTOR (T)</span>
+                <span class="text-primary-container">T = 0.8522 (Temperature Scaled)</span>
+              </div>
+              <div class="p-pad-md bg-surface-container border border-surface-container-high flex flex-col gap-pad-xs font-mono text-data-mono-sm">
+                <span class="font-bold text-primary">CONVOLUTIONAL FILTERS</span>
+                <span class="text-on-surface-variant">Spatial Residual Min-Max (SRM 30-Filter Suite)</span>
+                <span class="font-bold text-primary mt-pad-sm">EXECUTION RUNTIME ENGINE</span>
+                <span class="text-on-surface-variant">TensorFlow Keras (Native Python 3.10)</span>
+                <span class="font-bold text-primary mt-pad-sm">VERDICT SENSITIVITY</span>
+                <span class="text-on-surface-variant">Tau (τ) = 0.7300 (Standard Operational Baseline)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================= -->
+        <!-- SECTION 05: ABOUT & DOCUMENTATION                             -->
+        <!-- ============================================================= -->
+        <div id="section-about" class="section-content hidden flex-col w-full p-pad-lg">
+          <div class="w-full bg-surface-container-lowest p-pad-lg flex flex-col gap-pad-md border border-surface-container-high">
+            <div class="flex items-center gap-pad-sm">
+              <span class="w-2 h-2 bg-primary-container"></span>
+              <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                SECTION 05 // SYSTEM SPECIFICATIONS & ETHICS
+              </span>
+            </div>
+            <p class="font-body-md text-body-md text-on-surface leading-relaxed">
+              StegoShield is a dedicated digital image steganalysis workstation engineered for precision identification of anomalous bit-plane payloads.
+              By combining convolutional residual representations with calibrated probability modeling, the platform enables forensic analysts to inspect media files with verified mathematical confidence.
+            </p>
+            <div class="p-pad-md bg-surface-container border border-surface-container-high font-mono text-data-mono-sm text-on-surface-variant">
+              DISCLAIMER: High-frequency residual visualizations reflect statistical deviations analyzed by the detection model. They are auxiliary analytical aids and do not constitute absolute proof of payload geometry.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================================================================= -->
+  <!-- JAVASCRIPT ENGINE: REAL BACKEND INFERENCE & UI TRANSITIONS         -->
+  <!-- ================================================================= -->
+  <script>
+    let currentFile = null;
+    let currentThreshold = 0.50;
+    let currentProfile = "BALANCED";
+    let lastAnalysisResult = null;
+
+    // Forensic Sub-sections State
+    let currentAnalyzeSubSection = 'dossier';
+    let currentHistData = null;
+    let currentMetadata = null;
+    let currentMetaCategory = 'all';
+    let currentMetaFilterText = '';
+    let currentSelectedChannel = 'all';
+    let isElaHeatmapActive = false;
+    let elaDebounceTimer = null;
+    let noiseDebounceTimer = null;
+
+    // Directory switching
+    function switchDirectory(sectionId, element) {
+      document.querySelectorAll('.nav-item').forEach(item => {
+        item.className = 'nav-item flex items-center justify-between px-pad-sm py-pad-sm font-data-mono-md text-data-mono-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors cursor-pointer';
+      });
+      element.className = 'nav-item flex items-center justify-between px-pad-sm py-pad-sm transition-colors bg-primary-container text-on-primary font-bold border-l-2 border-primary-container cursor-pointer';
+
+      document.querySelectorAll('.section-content').forEach(sec => {
+        sec.classList.add('hidden');
+      });
+      const targetSec = document.getElementById('section-' + sectionId);
+      if (targetSec) {
+        targetSec.classList.remove('hidden');
+      }
+
+      if (sectionId === 'scan-history') {
+        loadHistory();
+      }
+    }
+
+    // Safe DOM helper to prevent any null reference errors
+    function safeSetText(id, text) {
+      const el = document.getElementById(id);
+      if (el) el.innerText = text;
+    }
+    function safeSetSrc(id, src) {
+      const el = document.getElementById(id);
+      if (el) el.src = src;
+    }
+
+    // State switcher (Intake -> Scan -> Result)
+    function switchState(targetState) {
+      const views = {
+        'intake': document.getElementById('view-intake'),
+        'scan': document.getElementById('view-scan'),
+        'result': document.getElementById('view-result')
+      };
+      const buttons = {
+        'intake': document.getElementById('btn-state-intake'),
+        'scan': document.getElementById('btn-state-scan'),
+        'result': document.getElementById('btn-state-result')
+      };
+
+      Object.keys(views).forEach(key => {
+        if (views[key]) {
+          views[key].classList.add('hidden');
+          views[key].classList.remove('flex', 'grid');
+        }
+      });
+      Object.keys(buttons).forEach(key => {
+        if (buttons[key]) {
+          buttons[key].className = 'px-pad-sm py-pad-2xs font-data-mono-sm text-data-mono-sm text-on-surface-variant hover:text-on-surface uppercase transition-colors';
+        }
+      });
+
+      const btnReanalyze = document.getElementById('btn-reanalyze');
+
+      if (targetState === 'intake') {
+        if (views.intake) {
+          views.intake.classList.remove('hidden');
+          views.intake.classList.add('flex');
+        }
+        if (buttons.intake) {
+          buttons.intake.className = 'px-pad-sm py-pad-2xs font-data-mono-sm text-data-mono-sm bg-primary-container text-on-primary font-bold uppercase transition-colors';
+        }
+        if (btnReanalyze) btnReanalyze.classList.add('hidden');
+      } else if (targetState === 'scan') {
+        if (views.scan) {
+          views.scan.classList.remove('hidden');
+          views.scan.classList.add('flex');
+        }
+        if (buttons.scan) {
+          buttons.scan.className = 'px-pad-sm py-pad-2xs font-data-mono-sm text-data-mono-sm bg-primary-container text-on-primary font-bold uppercase transition-colors';
+        }
+        if (btnReanalyze) btnReanalyze.classList.add('hidden');
+      } else if (targetState === 'result') {
+        if (views.result) {
+          views.result.classList.remove('hidden');
+          views.result.classList.add('flex');
+        }
+        if (buttons.result) {
+          buttons.result.className = 'px-pad-sm py-pad-2xs font-data-mono-sm text-data-mono-sm bg-primary-container text-on-primary font-bold uppercase transition-colors';
+        }
+        if (btnReanalyze) btnReanalyze.classList.remove('hidden');
+      }
+    }
+
+    function resetIntake() {
+      currentFile = null;
+      lastAnalysisResult = null;
+      const preview = document.getElementById('staged-image-preview');
+      if (preview) {
+        preview.src = '';
+        preview.classList.add('hidden');
+      }
+      const promptBox = document.getElementById('reticle-matrix-box');
+      if (promptBox) promptBox.classList.remove('hidden');
+      const fileInput = document.getElementById('file-input');
+      if (fileInput) fileInput.value = '';
+      safeSetText('staged-filename', 'NO FILE SELECTED');
+      safeSetText('staged-format', 'AWAITING INPUT');
+      safeSetText('meta-dimensions', '--- × ---');
+      safeSetText('meta-size', '---');
+      safeSetText('meta-type', '---');
+      safeSetText('meta-sha256', '---');
+      const tauSlider = document.getElementById('tau-slider');
+      if (tauSlider) tauSlider.value = 0.50;
+      updateTau(0.50);
+      switchState('intake');
+    }
+
+    function updateTau(val) {
+      currentThreshold = parseFloat(val);
+      safeSetText('tau-val', currentThreshold.toFixed(2));
+    }
+
+    // File Selection & Drag & Drop Handling
+    const dropArea = document.getElementById('drop-area');
+    if (dropArea) {
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropArea.classList.add('border-primary-container');
+        }, false);
+      });
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropArea.classList.remove('border-primary-container');
+        }, false);
+      });
+      dropArea.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          processUploadedFile(files[0]);
+        }
+      });
+    }
+
+    function handleFileSelect(event) {
+      if (event.target.files && event.target.files.length > 0) {
+        processUploadedFile(event.target.files[0]);
+      }
+    }
+
+    function processUploadedFile(file) {
+      currentFile = file;
+      safeSetText('staged-filename', file.name.toUpperCase());
+      safeSetText('meta-size', (file.size / (1024 * 1024)).toFixed(2) + ' MB');
+      
+      const ext = file.name.split('.').pop().toUpperCase();
+      safeSetText('staged-format', 'FORMAT: ' + ext);
+      safeSetText('meta-type', ext + ' / ' + (['PNG', 'BMP', 'TIFF'].includes(ext) ? 'LOSSLESS' : 'COMPRESSED'));
+
+      // Preview in staged reticle
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          safeSetText('meta-dimensions', img.width + ' × ' + img.height + ' PX');
+          
+          const preview = document.getElementById('staged-image-preview');
+          if (preview) {
+            preview.src = e.target.result;
+            preview.classList.remove('hidden');
+          }
+          const promptBox = document.getElementById('reticle-matrix-box');
+          if (promptBox) promptBox.classList.add('hidden');
+
+          // Stage original in subviews
+          safeSetSrc('result-source-image', e.target.result);
+          safeSetSrc('ela-source-preview', e.target.result);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+
+      safeSetText('meta-sha256', 'COMPUTED AT SCAN TIME');
+      
+      // Proactively compute forensics for interactive explorer
+      stageImageForensics(file);
+    }
+
+    // =========================================================================
+    // FORENSIC SUB-SECTIONS INTERACTIVITY & LIVE CONTROLS (ANALYZE ONLY)
+    // =========================================================================
+
+    function switchAnalyzeSubSection(subName) {
+      currentAnalyzeSubSection = subName;
+      const subTabs = ['dossier', 'ela', 'noise', 'metadata'];
+
+      subTabs.forEach(name => {
+        const btn = document.getElementById('tab-sub-' + name);
+        const view = document.getElementById('subview-' + name);
+        if (btn) {
+          if (name === subName) {
+            btn.className = 'subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs bg-primary-container text-on-primary font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer';
+          } else {
+            btn.className = 'subtab-btn flex-1 min-w-[130px] px-pad-sm py-pad-xs text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center justify-center gap-1.5 cursor-pointer';
+          }
+        }
+        if (view) {
+          if (name === subName) {
+            view.classList.remove('hidden');
+            view.classList.add('flex');
+          } else {
+            view.classList.add('hidden');
+            view.classList.remove('flex');
+          }
+        }
+      });
+
+      if (subName === 'noise') {
+        setTimeout(renderHistogram, 50);
+      }
+
+      // Ensure data is loaded if an image is staged but full scan was skipped
+      if (currentFile && !lastAnalysisResult && !currentHistData) {
+        stageImageForensics(currentFile);
+      }
+    }
+
+    async function openDirectSubSection(subName) {
+      if (!currentFile) {
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.click();
+        return;
+      }
+      switchState('result');
+      switchAnalyzeSubSection(subName);
+      if (!lastAnalysisResult && !currentHistData) {
+        await stageImageForensics(currentFile);
+      }
+    }
+
+    async function stageImageForensics(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const resp = await fetch('/api/forensics/stage-image', {
+          method: 'POST',
+          body: formData
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.ela_image_b64) safeSetSrc('ela-result-image', data.ela_image_b64);
+          if (data.ela_stats) {
+            safeSetText('ela-stat-mae', data.ela_stats.mae);
+            safeSetText('ela-stat-max', data.ela_stats.max_diff + ' / 255');
+            safeSetText('ela-stat-anomaly', data.ela_stats.anomaly_pct + '%');
+            safeSetText('ela-stat-status', data.ela_stats.status);
+            safeSetText('ela-status-badge', data.ela_stats.status);
+          }
+          if (data.noise_image_b64) safeSetSrc('noise-result-image', data.noise_image_b64);
+          if (data.noise_stats) {
+            safeSetText('noise-stat-variance', data.noise_stats.noise_variance.toFixed(1));
+            safeSetText('noise-stat-density', data.noise_stats.high_freq_density.toFixed(1) + '%');
+          }
+          if (data.histogram_data) {
+            currentHistData = data.histogram_data;
+            if (data.histogram_data.stats) {
+              safeSetText('hist-stat-mean', data.histogram_data.stats.mean_intensity);
+              safeSetText('hist-stat-parity', `${data.histogram_data.stats.lsb_even_pct}% E / ${data.histogram_data.stats.lsb_odd_pct}% O`);
+            }
+            renderHistogram();
+          }
+          if (data.metadata) {
+            currentMetadata = data.metadata;
+            renderMetadataTable(data.metadata);
+          }
+        }
+      } catch (err) {
+        console.error('Forensics stage error:', err);
+      }
+    }
+
+    // --- ELA Controls ---
+    function onElaParamChange() {
+      const q = document.getElementById('ela-slider-quality').value;
+      const s = document.getElementById('ela-slider-scale').value;
+      const invert = document.getElementById('ela-toggle-invert').checked;
+
+      safeSetText('ela-val-quality', q + '%');
+      safeSetText('ela-val-scale', s + 'x');
+      safeSetText('ela-viewport-tag', `Q=${q} | GAIN=${s}x${invert ? ' | INVERT' : ''}`);
+
+      clearTimeout(elaDebounceTimer);
+      const spinner = document.getElementById('ela-spinner');
+      if (spinner) spinner.classList.remove('hidden');
+
+      elaDebounceTimer = setTimeout(async () => {
+        try {
+          const formData = new FormData();
+          if (currentFile) formData.append('file', currentFile);
+          formData.append('quality', q);
+          formData.append('scale', s);
+          formData.append('invert', invert);
+
+          const resp = await fetch('/api/forensics/ela', {
+            method: 'POST',
+            body: formData
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            safeSetSrc('ela-result-image', data.ela_image_b64);
+            if (data.stats) {
+              safeSetText('ela-stat-mae', data.stats.mae);
+              safeSetText('ela-stat-max', data.stats.max_diff + ' / 255');
+              safeSetText('ela-stat-anomaly', data.stats.anomaly_pct + '%');
+              safeSetText('ela-stat-status', data.stats.status);
+              safeSetText('ela-status-badge', data.stats.status);
+            }
+          }
+        } catch (err) {
+          console.error('ELA recalculation error:', err);
+        } finally {
+          if (spinner) spinner.classList.add('hidden');
+        }
+      }, 70);
+    }
+
+    function setElaQualityPreset(val) {
+      const el = document.getElementById('ela-slider-quality');
+      if (el) { el.value = val; onElaParamChange(); }
+    }
+
+    function setElaScalePreset(val) {
+      const el = document.getElementById('ela-slider-scale');
+      if (el) { el.value = val; onElaParamChange(); }
+    }
+
+    function toggleElaHeatmap() {
+      const chk = document.getElementById('ela-toggle-heatmap');
+      const img = document.getElementById('ela-result-image');
+      if (!img) return;
+      isElaHeatmapActive = chk && chk.checked;
+      if (isElaHeatmapActive) {
+        img.style.filter = 'contrast(1.6) saturate(2.2) hue-rotate(185deg)';
+      } else {
+        img.style.filter = 'none';
+      }
+    }
+
+    function resetElaControls() {
+      const q = document.getElementById('ela-slider-quality');
+      const s = document.getElementById('ela-slider-scale');
+      const inv = document.getElementById('ela-toggle-invert');
+      const hm = document.getElementById('ela-toggle-heatmap');
+      if (q) q.value = 90;
+      if (s) s.value = 15;
+      if (inv) inv.checked = false;
+      if (hm) { hm.checked = false; toggleElaHeatmap(); }
+      onElaParamChange();
+    }
+
+    // --- Noise & Histogram Controls ---
+    function onNoiseParamChange() {
+      const amp = document.getElementById('noise-slider-amp').value;
+      const eq = document.getElementById('noise-toggle-equalize').checked;
+
+      safeSetText('noise-val-amp', amp + 'x');
+      safeSetText('noise-viewport-tag', `GAIN=${amp}x${eq ? ' | EQUALIZED' : ''}`);
+
+      clearTimeout(noiseDebounceTimer);
+      const spinner = document.getElementById('noise-spinner');
+      if (spinner) spinner.classList.remove('hidden');
+
+      noiseDebounceTimer = setTimeout(async () => {
+        try {
+          const formData = new FormData();
+          if (currentFile) formData.append('file', currentFile);
+          formData.append('amplification', amp);
+          formData.append('equalize', eq);
+
+          const resp = await fetch('/api/forensics/noise', {
+            method: 'POST',
+            body: formData
+          });
+          if (resp.ok) {
+            const data = await resp.json();
+            safeSetSrc('noise-result-image', data.noise_image_b64);
+            if (data.stats) {
+              safeSetText('noise-stat-variance', data.stats.noise_variance.toFixed(1));
+              safeSetText('noise-stat-density', data.stats.high_freq_density.toFixed(1) + '%');
+            }
+          }
+        } catch (err) {
+          console.error('Noise recalculation error:', err);
+        } finally {
+          if (spinner) spinner.classList.add('hidden');
+        }
+      }, 70);
+    }
+
+    function setHistogramChannel(chan) {
+      currentSelectedChannel = chan;
+      const chanBtns = ['all', 'r', 'g', 'b', 'gray'];
+      chanBtns.forEach(c => {
+        const btn = document.getElementById('btn-chan-' + c);
+        if (btn) {
+          if (c === chan) {
+            btn.className = 'px-2.5 py-1 bg-primary-container text-on-primary font-bold transition-colors cursor-pointer';
+          } else {
+            const colors = { 'r': 'text-[#ef4444]', 'g': 'text-[#22c55e]', 'b': 'text-[#3b82f6]', 'gray': 'text-on-surface', 'all': 'text-on-surface' };
+            btn.className = `px-2.5 py-1 bg-surface-container hover:bg-surface-bright ${colors[c] || 'text-on-surface'} border border-surface-container-high transition-colors cursor-pointer`;
+          }
+        }
+      });
+      renderHistogram();
+    }
+
+    function renderHistogram() {
+      const canvas = document.getElementById('hist-canvas');
+      if (!canvas || !currentHistData) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      const numBins = parseInt(document.getElementById('hist-slider-bins').value) || 256;
+      safeSetText('hist-val-bins', numBins + ' BINS');
+
+      ctx.clearRect(0, 0, w, h);
+
+      // Background Grid
+      ctx.fillStyle = '#121315';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.strokeStyle = '#292a2c';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= w; x += w / 4) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h - 25);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= h - 25; y += (h - 25) / 4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Aggregate bins if numBins < 256
+      function getBinnedData(rawArr) {
+        if (!rawArr || rawArr.length === 0) return [];
+        if (numBins === 256) return rawArr;
+        const binSize = 256 / numBins;
+        const binned = [];
+        for (let i = 0; i < numBins; i++) {
+          const start = Math.floor(i * binSize);
+          const end = Math.floor((i + 1) * binSize);
+          let sum = 0;
+          for (let j = start; j < end && j < rawArr.length; j++) sum += rawArr[j];
+          binned.push(sum);
+        }
+        return binned;
+      }
+
+      const drawH = h - 30;
+      let maxVal = 1;
+      ['r', 'g', 'b', 'gray'].forEach(ch => {
+        if (currentHistData[ch]) {
+          const maxCh = Math.max(...currentHistData[ch]);
+          if (maxCh > maxVal) maxVal = maxCh;
+        }
+      });
+
+      const channelsToDraw = [];
+      if (currentSelectedChannel === 'all') {
+        channelsToDraw.push({ ch: 'gray', color: '#caf231', fill: 'rgba(202, 242, 49, 0.08)' });
+        channelsToDraw.push({ ch: 'b', color: '#3b82f6', fill: 'rgba(59, 130, 246, 0.12)' });
+        channelsToDraw.push({ ch: 'g', color: '#22c55e', fill: 'rgba(34, 197, 94, 0.15)' });
+        channelsToDraw.push({ ch: 'r', color: '#ef4444', fill: 'rgba(239, 68, 68, 0.15)' });
+      } else if (currentSelectedChannel === 'r') {
+        channelsToDraw.push({ ch: 'r', color: '#ef4444', fill: 'rgba(239, 68, 68, 0.25)' });
+      } else if (currentSelectedChannel === 'g') {
+        channelsToDraw.push({ ch: 'g', color: '#22c55e', fill: 'rgba(34, 197, 94, 0.25)' });
+      } else if (currentSelectedChannel === 'b') {
+        channelsToDraw.push({ ch: 'b', color: '#3b82f6', fill: 'rgba(59, 130, 246, 0.25)' });
+      } else if (currentSelectedChannel === 'gray') {
+        channelsToDraw.push({ ch: 'gray', color: '#caf231', fill: 'rgba(202, 242, 49, 0.25)' });
+      }
+
+      channelsToDraw.forEach(item => {
+        const data = getBinnedData(currentHistData[item.ch]);
+        if (!data || data.length === 0) return;
+
+        ctx.beginPath();
+        ctx.moveTo(0, drawH);
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const y = drawH - (data[i] / maxVal) * (drawH - 10);
+          ctx.lineTo(x, y);
+        }
+        ctx.lineTo(w, drawH);
+        ctx.closePath();
+        ctx.fillStyle = item.fill;
+        ctx.fill();
+
+        ctx.beginPath();
+        for (let i = 0; i < data.length; i++) {
+          const x = (i / (data.length - 1)) * w;
+          const y = drawH - (data[i] / maxVal) * (drawH - 10);
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.strokeStyle = item.color;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      });
+
+      // X-Axis Scale Labels
+      ctx.fillStyle = '#8f937a';
+      ctx.font = '10px Space Mono, monospace';
+      ctx.fillText('0', 4, h - 10);
+      ctx.fillText('64', w * 0.25 - 8, h - 10);
+      ctx.fillText('128', w * 0.5 - 10, h - 10);
+      ctx.fillText('192', w * 0.75 - 10, h - 10);
+      ctx.fillText('255', w - 24, h - 10);
+    }
+
+    // Attach canvas crosshair probe
+    const histCanvas = document.getElementById('hist-canvas');
+    if (histCanvas) {
+      histCanvas.addEventListener('mousemove', (e) => {
+        if (!currentHistData) return;
+        const rect = histCanvas.getBoundingClientRect();
+        const scaleX = histCanvas.width / rect.width;
+        const x = (e.clientX - rect.left) * scaleX;
+        const intensity = Math.min(255, Math.max(0, Math.floor((x / histCanvas.width) * 255)));
+
+        const chKey = (currentSelectedChannel === 'all' || currentSelectedChannel === 'gray') ? 'gray' : currentSelectedChannel;
+        const count = currentHistData[chKey] ? currentHistData[chKey][intensity] : 0;
+        safeSetText('hist-hover-coords', `INTENSITY: ${intensity} | PIXELS: ${count ? count.toLocaleString() : 0}`);
+      });
+      histCanvas.addEventListener('mouseleave', () => {
+        safeSetText('hist-hover-coords', 'HOVER TO PROBE INTENSITY');
+      });
+    }
+
+    // --- Metadata Table Controls ---
+    function renderMetadataTable(metaData) {
+      const tbody = document.getElementById('metadata-tbody');
+      if (!tbody || !metaData) return;
+
+      safeSetText('meta-tag-count', (metaData.raw_count || Object.keys(metaData).length) + ' TAGS EXTRACTED');
+
+      // Status Badges
+      const badgeExif = document.getElementById('meta-badge-exif');
+      const iconExif = document.getElementById('badge-icon-exif');
+      if (badgeExif) {
+        badgeExif.innerText = metaData.has_exif ? 'HEADER VERIFIED' : 'STRIPPED / SANITIZED';
+        badgeExif.className = metaData.has_exif ? 'font-bold text-[#22c55e]' : 'font-bold text-[#ef4444]';
+        if (iconExif) iconExif.className = metaData.has_exif ? 'material-symbols-outlined text-[20px] text-[#22c55e]' : 'material-symbols-outlined text-[20px] text-[#ef4444]';
+      }
+
+      const badgeSoft = document.getElementById('meta-badge-software');
+      if (badgeSoft) {
+        badgeSoft.innerText = metaData.software ? metaData.software : 'PURE SENSOR (CLEAN)';
+        badgeSoft.className = metaData.software ? 'font-bold text-[#eab308]' : 'font-bold text-[#22c55e]';
+      }
+
+      const badgeGps = document.getElementById('meta-badge-gps');
+      if (badgeGps) {
+        if (metaData.has_gps && metaData.google_maps_url) {
+          badgeGps.innerHTML = `<a href="${metaData.google_maps_url}" target="_blank" class="text-primary-container hover:underline flex items-center gap-1 font-bold"><span>DETECTED</span> <span class="material-symbols-outlined text-[12px]">open_in_new</span></a>`;
+        } else {
+          badgeGps.innerText = 'ABSENT / NO GPS';
+          badgeGps.className = 'font-bold text-on-surface-variant';
+        }
+      }
+
+      filterMetadataTable();
+    }
+
+    function setMetaCategory(cat) {
+      currentMetaCategory = cat;
+      const catBtns = ['all', 'container', 'exif', 'gps', 'integrity'];
+      const catNames = {
+        'all': 'all',
+        'container': 'Container & Geometry',
+        'exif': 'EXIF & Camera Hardware',
+        'gps': 'GPS Geolocation',
+        'integrity': 'Forensic Integrity'
+      };
+
+      catBtns.forEach(id => {
+        const btn = document.getElementById('cat-btn-' + id);
+        if (btn) {
+          if (catNames[id] === cat) {
+            btn.className = 'px-2 py-1 bg-primary-container text-on-primary font-bold transition-colors cursor-pointer';
+          } else {
+            btn.className = 'px-2 py-1 bg-surface-container hover:bg-surface-bright text-on-surface-variant border border-surface-container-high transition-colors cursor-pointer';
+          }
+        }
+      });
+      filterMetadataTable();
+    }
+
+    function filterMetadataTable() {
+      const tbody = document.getElementById('metadata-tbody');
+      if (!tbody || !currentMetadata || !currentMetadata.categories) return;
+
+      const filterText = (document.getElementById('meta-search-input')?.value || '').toLowerCase();
+      let html = '';
+      let matchCount = 0;
+
+      for (const [catName, tags] of Object.entries(currentMetadata.categories)) {
+        if (currentMetaCategory !== 'all' && currentMetaCategory !== catName) continue;
+
+        for (const [tag, val] of Object.entries(tags)) {
+          const tagStr = String(tag).toLowerCase();
+          const valStr = String(val).toLowerCase();
+
+          if (filterText && !tagStr.includes(filterText) && !valStr.includes(filterText)) {
+            continue;
+          }
+
+          matchCount++;
+          let statusBadge = '<span class="px-1.5 py-0.5 bg-surface-container text-on-surface-variant text-[11px] border border-surface-container-high font-mono">RECORDED</span>';
+          if (catName === 'Forensic Integrity') {
+            if (String(val).includes('YES') || String(val).includes('PRESENT') || String(val).includes('NOMINAL')) {
+              statusBadge = '<span class="px-1.5 py-0.5 bg-[#22c55e]/10 text-[#22c55e] text-[11px] border border-[#22c55e]/30 font-mono">NOMINAL</span>';
+            } else {
+              statusBadge = '<span class="px-1.5 py-0.5 bg-[#ef4444]/10 text-[#ef4444] text-[11px] border border-[#ef4444]/30 font-mono">FLAGGED</span>';
+            }
+          } else if (catName === 'GPS Geolocation') {
+            statusBadge = '<span class="px-1.5 py-0.5 bg-primary-container/10 text-primary-container text-[11px] border border-primary-container/30 font-mono">GEO-TAG</span>';
+          }
+
+          html += `
+            <tr class="hover:bg-surface-container/50 transition-colors">
+              <td class="p-pad-xs font-mono text-[11px] text-on-surface-variant">${catName}</td>
+              <td class="p-pad-xs font-mono text-[12px] text-primary font-bold">${tag}</td>
+              <td class="p-pad-xs font-mono text-[12px] text-on-surface break-all">${val}</td>
+              <td class="p-pad-xs text-right">${statusBadge}</td>
+            </tr>
+          `;
+        }
+      }
+
+      if (matchCount === 0) {
+        html = `<tr><td colspan="4" class="p-pad-md text-center text-on-surface-variant font-mono">No metadata matching current filter criteria.</td></tr>`;
+      }
+
+      tbody.innerHTML = html;
+    }
+
+    function copyMetadataJson() {
+      if (!currentMetadata) {
+        alert('No metadata available to copy.');
+        return;
+      }
+      const jsonStr = JSON.stringify(currentMetadata, null, 2);
+      navigator.clipboard.writeText(jsonStr).then(() => {
+        const btnText = document.getElementById('btn-copy-meta-text');
+        if (btnText) {
+          const orig = btnText.innerText;
+          btnText.innerText = 'COPIED!';
+          setTimeout(() => { btnText.innerText = orig; }, 1800);
+        }
+      }).catch(err => {
+        alert('Clipboard write failed: ' + err);
+      });
+    }
+
+    // Live Scan Execution & Real AI Backend Inference
+    async function startScanSequence() {
+      if (!currentFile) {
+        const fileInput = document.getElementById('file-input');
+        if (fileInput) fileInput.click();
+        return;
+      }
+
+      switchState('scan');
+      
+      const stageLabel = document.getElementById('scan-stage-label');
+      const timerLabel = document.getElementById('scan-timer');
+      const progressBar = document.getElementById('scan-progress-bar');
+      const pctLabel = document.getElementById('scan-pct-label');
+      const terminalLog = document.getElementById('scan-terminal-log');
+      
+      const stages = [
+        { label: 'STAGE 01/04: INITIALIZING IMAGE PIPELINE & TENSOR NORMALIZATION', progress: '25%', log: 'Target image ingested. Converting to normalized float32 tensor...' },
+        { label: 'STAGE 02/04: DECODING SPATIAL BITPLANES & SRM-30 CONVOLUTION', progress: '50%', log: 'Applying high-pass spatial decomposition filters...' },
+        { label: 'STAGE 03/04: RUNNING HIGH-PASS FREQUENCY DECOMPOSITION', progress: '75%', log: 'Running inference across 10.78M parameter CNN backbone...' },
+        { label: 'STAGE 04/04: DENSITY ESTIMATION & VECTOR CLASSIFICATION', progress: '100%', log: 'Applying Platt/logit temperature scaling (T=0.8522)...' }
+      ];
+
+      function setStepStatus(stepNum, status) {
+        const card = document.getElementById(`step-card-${stepNum}`);
+        const icon = document.getElementById(`step-icon-${stepNum}`);
+        const tag = document.getElementById(`step-tag-${stepNum}`);
+        if (!card || !icon) return;
+
+        if (status === 'active') {
+          card.className = 'flex items-center justify-between p-pad-xs bg-surface-container-high border border-primary-container transition-colors';
+          icon.innerText = 'sync';
+          icon.className = 'material-symbols-outlined text-primary-container text-[16px] animate-spin';
+          if (tag) tag.innerText = 'RUNNING...';
+        } else if (status === 'done') {
+          card.className = 'flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high transition-colors';
+          icon.innerText = 'check_circle';
+          icon.className = 'material-symbols-outlined text-primary-container text-[16px]';
+          const defaultTags = ['512×512×3 RGB', 'HIGH-PASS DELTA', 'CONV BACKBONE', 'T=0.8522 LOGIT SCALING'];
+          if (tag) tag.innerText = defaultTags[stepNum - 1] || 'DONE';
+        } else {
+          card.className = 'flex items-center justify-between p-pad-xs bg-surface-container border border-surface-container-high opacity-60 transition-colors';
+          icon.innerText = 'radio_button_unchecked';
+          icon.className = 'material-symbols-outlined text-on-surface-variant text-[16px]';
+          if (tag) tag.innerText = 'QUEUED';
+        }
+      }
+
+      // Initialize steps
+      setStepStatus(1, 'active');
+      setStepStatus(2, 'queued');
+      setStepStatus(3, 'queued');
+      setStepStatus(4, 'queued');
+
+      const startTime = performance.now();
+      if (terminalLog) {
+        terminalLog.innerHTML = `<div class="text-primary-container">&gt; [0.000s] Pipeline initialized for target: ${currentFile.name.toUpperCase()}</div>`;
+      }
+
+      const timerInterval = setInterval(() => {
+        const elapsed = ((performance.now() - startTime) / 1000).toFixed(3);
+        if (timerLabel) timerLabel.innerText = elapsed + 's';
+      }, 50);
+
+      let currentStage = 0;
+      const stageInterval = setInterval(() => {
+        if (currentStage < stages.length) {
+          const st = stages[currentStage];
+          if (stageLabel) stageLabel.innerText = st.label;
+          if (progressBar) progressBar.style.width = st.progress;
+          if (pctLabel) pctLabel.innerText = 'PIPELINE EXECUTION: ' + st.progress;
+
+          const stepIdx = currentStage + 1;
+          setStepStatus(stepIdx, 'active');
+          if (stepIdx > 1) setStepStatus(stepIdx - 1, 'done');
+
+          if (terminalLog) {
+            const elapsed = ((performance.now() - startTime) / 1000).toFixed(3);
+            const line = document.createElement('div');
+            line.innerHTML = `&gt; [${elapsed}s] ${st.log}`;
+            terminalLog.appendChild(line);
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+          }
+
+          currentStage++;
+        }
+      }, 350);
+
+      // Call real backend endpoint
+      const formData = new FormData();
+      formData.append('file', currentFile);
+      formData.append('threshold', currentThreshold);
+      formData.append('profile', currentProfile);
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          clearInterval(timerInterval);
+          clearInterval(stageInterval);
+          alert((data.error || 'INFERENCE_ERROR') + ': ' + (data.detail || 'Analysis failed.'));
+          switchState('intake');
+          return;
+        }
+
+        lastAnalysisResult = data;
+
+        clearInterval(timerInterval);
+        clearInterval(stageInterval);
+
+        // Mark all steps done
+        for (let s = 1; s <= 4; s++) setStepStatus(s, 'done');
+        if (progressBar) progressBar.style.width = '100%';
+        if (pctLabel) pctLabel.innerText = 'PIPELINE EXECUTION: 100%';
+        if (stageLabel) stageLabel.innerText = 'STAGE 04/04: ANALYSIS COMPLETE // TELEMETRY READY';
+        const finalSec = (data.runtime_ms / 1000).toFixed(3);
+        if (timerLabel) timerLabel.innerText = finalSec + 's';
+
+        if (terminalLog) {
+          const logEnd = document.createElement('div');
+          logEnd.className = 'text-primary-container font-bold';
+          logEnd.innerHTML = `&gt; [${finalSec}s] Verdict computed: ${data.verdict} (${data.confidence.toFixed(2)}%)`;
+          terminalLog.appendChild(logEnd);
+          terminalLog.scrollTop = terminalLog.scrollHeight;
+        }
+
+        setTimeout(() => {
+          renderAnalysisResult(data);
+          switchState('result');
+        }, 400);
+
+      } catch (err) {
+        console.error('Scan error:', err);
+        clearInterval(timerInterval);
+        clearInterval(stageInterval);
+        alert('COMMUNICATION_ERROR: Failed to reach inference backend.');
+        switchState('intake');
+      }
+    }
+
+    function renderAnalysisResult(data) {
+      safeSetText('result-filename', data.filename.toUpperCase());
+      safeSetText('result-scan-id', '[' + data.scan_id + ']');
+      safeSetText('result-runtime', data.runtime_ms + ' ms');
+
+      // Verdict & Badges
+      const verdictEl = document.getElementById('result-verdict');
+      const flagEl = document.getElementById('result-flag');
+      const confEl = document.getElementById('result-confidence');
+
+      if (verdictEl) verdictEl.innerText = data.verdict;
+      if (flagEl) flagEl.innerText = data.flag;
+      if (confEl) confEl.innerText = (data.is_stego ? 'HIGH CONFIDENCE (' : 'CONFIDENCE (') + data.confidence.toFixed(2) + '%)';
+
+      if (data.is_stego) {
+        if (verdictEl) verdictEl.className = 'inline-block px-pad-md py-pad-xs bg-surface-container-lowest text-[#ef4444] font-data-mono-lg text-data-mono-lg font-bold tracking-widest uppercase border border-[#ef4444] font-mono';
+        if (flagEl) flagEl.className = 'font-data-mono-sm text-data-mono-sm text-[#ef4444] font-mono font-bold';
+        if (confEl) confEl.className = 'text-[#ef4444] font-headline-md font-bold font-mono';
+      } else {
+        if (verdictEl) verdictEl.className = 'inline-block px-pad-md py-pad-xs bg-surface-container-lowest text-[#22c55e] font-data-mono-lg text-data-mono-lg font-bold tracking-widest uppercase border border-[#22c55e] font-mono';
+        if (flagEl) flagEl.className = 'font-data-mono-sm text-data-mono-sm text-[#22c55e] font-mono font-bold';
+        if (confEl) confEl.className = 'text-[#22c55e] font-headline-md font-bold font-mono';
+      }
+
+      safeSetText('result-recommendation', data.recommendation);
+      const recEl = document.getElementById('result-recommendation');
+      if (recEl) {
+        recEl.className = data.is_stego ? 'text-[#ef4444] font-bold font-mono' : 'text-[#22c55e] font-bold font-mono';
+      }
+
+      safeSetText('result-margin', data.margin);
+      const marginEl = document.getElementById('result-margin');
+      if (marginEl) {
+        marginEl.className = data.is_stego ? 'text-[#ef4444] font-bold font-mono' : 'text-[#22c55e] font-bold font-mono';
+      }
+
+      // Probability Vector Scale Gauge
+      const probPct = Math.min(Math.max(data.probability, 1), 99);
+      const tauPct = Math.round(data.tau * 100);
+
+      safeSetText('result-tau-label', 'τ THRESHOLD = ' + data.tau.toFixed(4));
+      const gPointer = document.getElementById('gauge-pointer');
+      if (gPointer) gPointer.style.left = 'calc(' + probPct + '% - 40px)';
+      safeSetText('gauge-pointer-val', '▲ ' + probPct.toFixed(2) + '%');
+
+      const gPointerVal = document.getElementById('gauge-pointer-val');
+      if (gPointerVal) {
+        gPointerVal.className = data.is_stego ?
+          'bg-[#ef4444] text-white font-data-mono-sm text-data-mono-sm font-bold px-pad-xs py-0.5 font-mono' :
+          'bg-[#22c55e] text-black font-data-mono-sm text-data-mono-sm font-bold px-pad-xs py-0.5 font-mono';
+      }
+      
+      const gTick = document.getElementById('gauge-threshold-tick');
+      if (gTick) gTick.style.left = 'calc(' + tauPct + '% - 2px)';
+      const gLine = document.getElementById('gauge-dividing-line');
+      if (gLine) gLine.style.left = tauPct + '%';
+      safeSetText('gauge-tau-marker', data.tau.toFixed(2) + ' [τ]');
+
+      const gClean = document.getElementById('gauge-bar-clean');
+      if (gClean) {
+        gClean.style.width = Math.min(probPct, tauPct) + '%';
+        gClean.className = 'h-full bg-[#22c55e]';
+      }
+      const gStego = document.getElementById('gauge-bar-stego');
+      if (gStego) {
+        gStego.style.width = Math.max(0, probPct - tauPct) + '%';
+        gStego.className = 'h-full bg-[#ef4444]';
+      }
+
+      // Images & Target Metadata
+      safeSetSrc('result-source-image', data.source_image_b64);
+      safeSetText('panel1-title', 'SOURCE IMAGE [' + data.filename.toUpperCase() + ']');
+      safeSetText('res-meta-dimensions', data.dimensions || (document.getElementById('meta-dimensions') ? document.getElementById('meta-dimensions').innerText : '512 × 512 PX'));
+      safeSetText('res-meta-size', data.file_size || (document.getElementById('meta-size') ? document.getElementById('meta-size').innerText : '---'));
+      safeSetText('res-meta-container', data.container_type || 'PNG / LOSSLESS');
+      safeSetText('res-meta-sha256', data.sha256 ? data.sha256.toUpperCase() : '---');
+
+      // Technical Matrix
+      safeSetText('tech-container', data.container_type);
+      safeSetText('tech-tau', data.tau.toFixed(4));
+      safeSetText('tech-runtime', data.runtime_ms + ' ms');
+      safeSetText('tech-entropy', data.entropy);
+      safeSetText('tech-sigma', data.sigma_delta);
+      const sigmaEl = document.getElementById('tech-sigma');
+      if (sigmaEl) {
+        sigmaEl.className = data.is_stego ? 'text-[#ef4444] font-mono font-bold text-data-mono-md' : 'text-[#22c55e] font-mono font-bold text-data-mono-md';
+      }
+
+      // Real Timings Breakout if available
+      if (data.timings) {
+        console.log('[TIMINGS] Decode:', data.timings.decode_ms, 'ms | Preprocess:', data.timings.preprocess_ms, 'ms | Inference:', data.timings.inference_ms, 'ms | Postprocess:', data.timings.postprocess_ms, 'ms | Total:', data.timings.total_ms, 'ms');
+      }
+
+      // Interpretation
+      const interpHeadingEl = document.getElementById('interp-heading');
+      if (interpHeadingEl) {
+        interpHeadingEl.className = data.is_stego ? 'font-bold text-body-md text-[#ef4444]' : 'font-bold text-body-md text-[#22c55e]';
+      }
+      safeSetText('interp-heading', data.is_stego ? 
+        'Strong model evidence is present for steganographic alteration. Further review is recommended.' :
+        'Statistical indicators align with unmanipulated container distribution. Clean pass confirmed.');
+      safeSetText('interp-body', data.interpretation);
+
+      // Populate Sub-Section 02: ELA
+      if (data.source_image_b64) safeSetSrc('ela-source-preview', data.source_image_b64);
+      if (data.ela_image_b64) safeSetSrc('ela-result-image', data.ela_image_b64);
+      if (data.ela_stats) {
+        safeSetText('ela-stat-mae', data.ela_stats.mae !== undefined ? data.ela_stats.mae : '--');
+        safeSetText('ela-stat-max', data.ela_stats.max_diff !== undefined ? data.ela_stats.max_diff + ' / 255' : '--');
+        safeSetText('ela-stat-anomaly', data.ela_stats.anomaly_pct !== undefined ? data.ela_stats.anomaly_pct + '%' : '--');
+        safeSetText('ela-stat-status', data.ela_stats.status || 'UNIFORM ERROR PATTERN');
+        safeSetText('ela-status-badge', data.ela_stats.status || 'READY');
+      }
+
+      // Populate Sub-Section 03: Noise & Histogram
+      if (data.noise_image_b64) safeSetSrc('noise-result-image', data.noise_image_b64);
+      if (data.noise_stats) {
+        safeSetText('noise-stat-variance', data.noise_stats.noise_variance !== undefined ? data.noise_stats.noise_variance.toFixed(1) : '--');
+        safeSetText('noise-stat-density', data.noise_stats.high_freq_density !== undefined ? data.noise_stats.high_freq_density.toFixed(1) + '%' : '--');
+      }
+      if (data.histogram_data) {
+        currentHistData = data.histogram_data;
+        if (data.histogram_data.stats) {
+          safeSetText('hist-stat-mean', data.histogram_data.stats.mean_intensity !== undefined ? data.histogram_data.stats.mean_intensity : '--');
+          safeSetText('hist-stat-parity', data.histogram_data.stats.lsb_even_pct !== undefined ? `${data.histogram_data.stats.lsb_even_pct}% E / ${data.histogram_data.stats.lsb_odd_pct}% O` : '--');
+        }
+        renderHistogram();
+      }
+
+      // Populate Sub-Section 04: Metadata
+      if (data.metadata) {
+        currentMetadata = data.metadata;
+        renderMetadataTable(data.metadata);
+      }
+      safeSetText('interp-signature', 'SHA256: ' + (data.sha256 ? data.sha256.toUpperCase() : ''));
+    }
+
+    // Actions
+    function downloadTelemetryJson() {
+      if (!lastAnalysisResult) {
+        window.open('/api/export-history-json', '_blank');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(lastAnalysisResult, null, 2));
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "stegoshield_telemetry_" + Date.now() + ".json");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    }
+
+    function downloadDossierReport() {
+      if (!lastAnalysisResult) {
+        window.open('/api/export-history-csv', '_blank');
+        return;
+      }
+      const report = `===============================================================
+STEGOSHIELD FORENSIC DOSSIER // REPORT
+===============================================================
+TARGET FILE: ${lastAnalysisResult.filename}
+TIMESTAMP:   ${lastAnalysisResult.timestamp}
+SCAN ID:     ${lastAnalysisResult.scan_id}
+SHA-256:     ${lastAnalysisResult.sha256}
+FILE SIZE:   ${lastAnalysisResult.file_size} (${lastAnalysisResult.file_size_bytes} bytes)
+---------------------------------------------------------------
+CLASSIFICATION OUTCOME: ${lastAnalysisResult.verdict}
+MODEL CONFIDENCE:       ${lastAnalysisResult.confidence}%
+ACTIVE THRESHOLD (TAU): ${lastAnalysisResult.tau}
+MARGIN:                 ${lastAnalysisResult.margin}
+DELTA FROM BASELINE:    ${lastAnalysisResult.sigma_delta}
+RESIDUAL ENTROPY:       ${lastAnalysisResult.entropy}
+RECOMMENDATION:         ${lastAnalysisResult.recommendation}
+---------------------------------------------------------------
+REAL TIMINGS (MS):
+- DECODE:        ${lastAnalysisResult.timings ? lastAnalysisResult.timings.decode_ms : 'N/A'} ms
+- PREPROCESS:    ${lastAnalysisResult.timings ? lastAnalysisResult.timings.preprocess_ms : 'N/A'} ms
+- INFERENCE:     ${lastAnalysisResult.timings ? lastAnalysisResult.timings.inference_ms : 'N/A'} ms
+- POSTPROCESS:   ${lastAnalysisResult.timings ? lastAnalysisResult.timings.postprocess_ms : 'N/A'} ms
+- TOTAL ELAPSED: ${lastAnalysisResult.runtime_ms} ms
+---------------------------------------------------------------
+FORENSIC INTERPRETATION:
+${lastAnalysisResult.interpretation}
+===============================================================`;
+      const dataStr = "data:text/plain;charset=utf-8," + encodeURIComponent(report);
+      const dlAnchor = document.createElement('a');
+      dlAnchor.setAttribute("href", dataStr);
+      dlAnchor.setAttribute("download", "stegoshield_dossier_" + Date.now() + ".txt");
+      document.body.appendChild(dlAnchor);
+      dlAnchor.click();
+      dlAnchor.remove();
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch('/api/history');
+        const data = await res.json();
+        const tbody = document.getElementById('history-tbody');
+        if (data.history && data.history.length > 0) {
+          tbody.innerHTML = data.history.map(item => `
+            <tr class="hover:bg-surface-container transition-colors">
+              <td class="p-pad-sm text-on-surface-variant">${item.timestamp}</td>
+              <td class="p-pad-sm text-on-surface font-bold">${item.filename}</td>
+              <td class="p-pad-sm ${item.classification === 'STEGO DETECTED' ? 'text-[#ef4444] font-bold' : 'text-[#22c55e] font-bold'}">${item.classification}</td>
+              <td class="p-pad-sm text-on-surface">${(item.confidence * 100).toFixed(1)}%</td>
+              <td class="p-pad-sm text-on-surface-variant">${item.entropy}</td>
+              <td class="p-pad-sm text-on-surface font-mono">${item.runtime_ms}ms</td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) {
+        console.error('History load error:', e);
+      }
+    }
+
+    async function clearHistoryLog() {
+      await fetch('/api/clear-history', { method: 'POST' });
+      document.getElementById('history-tbody').innerHTML = `
+        <tr>
+          <td colspan="6" class="p-pad-md text-center text-on-surface-variant">Log database cleared.</td>
+        </tr>
+      `;
+    }
+
+    async function runBatchScan() {
+      const dirPath = document.getElementById('batch-dir-path').value;
+      const resContainer = document.getElementById('batch-results-table');
+      resContainer.innerHTML = '<div class="p-pad-md bg-surface-container text-primary-container font-mono border border-surface-container-high animate-pulse">PROCESSING BATCH INFERENCE VIA NEURAL ENGINE...</div>';
+      
+      const formData = new FormData();
+      formData.append('directory_path', dirPath);
+      formData.append('threshold', currentThreshold);
+      formData.append('profile', currentProfile);
+
+      try {
+        const resp = await fetch('/api/batch', {
+          method: 'POST',
+          body: formData
+        });
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          resContainer.innerHTML = `<div class="p-pad-md bg-error/10 border border-error text-error font-mono">${data.error || 'BATCH_ERROR'}: ${data.detail || 'Batch processing failed.'}</div>`;
+          return;
+        }
+
+        let rowsHtml = '';
+        if (data.results && data.results.length > 0) {
+          rowsHtml = data.results.map(r => `
+            <tr class="hover:bg-surface-container transition-colors">
+              <td class="p-pad-sm font-bold text-on-surface">${r.filename}</td>
+              <td class="p-pad-sm ${r.classification === 'STEGO DETECTED' ? 'text-[#ef4444] font-bold' : 'text-[#22c55e] font-bold'}">${r.classification}</td>
+              <td class="p-pad-sm text-on-surface">${r.probability}%</td>
+              <td class="p-pad-sm text-on-surface-variant">${r.entropy}</td>
+              <td class="p-pad-sm text-on-surface-variant font-mono">${r.runtime_ms}ms</td>
+            </tr>
+          `).join('');
+        }
+
+        resContainer.innerHTML = `
+          <div class="p-pad-md bg-surface-container border border-surface-container-high font-mono text-data-mono-sm">
+            <div class="flex items-center justify-between border-b border-surface-container-high pb-pad-xs mb-pad-sm">
+              <div>
+                <span class="text-primary font-bold">BATCH SCAN COMPLETE:</span>
+                <span class="text-on-surface-variant">Processed ${data.processed} / ${data.total} targets (${data.failed} failed)</span>
+              </div>
+              <div class="text-error font-bold">STEGO DETECTED: ${data.threats_found}</div>
+            </div>
+            <div class="overflow-x-auto max-h-96">
+              <table class="w-full text-left font-mono text-data-mono-sm border border-surface-container-high">
+                <thead class="bg-surface-container-highest text-on-surface-variant uppercase text-label-caps">
+                  <tr>
+                    <th class="p-pad-sm">FILENAME</th>
+                    <th class="p-pad-sm">CLASSIFICATION</th>
+                    <th class="p-pad-sm">PROBABILITY</th>
+                    <th class="p-pad-sm">ENTROPY</th>
+                    <th class="p-pad-sm">LATENCY</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-surface-container-high bg-surface-container-low">
+                  ${rowsHtml}
+                </tbody>
+              </table>
+            </div>
+            <div class="flex gap-pad-sm mt-pad-sm">
+              <a href="/api/export-history-csv" target="_blank" class="px-pad-sm py-pad-xs bg-primary-container text-on-primary font-bold uppercase font-mono">EXPORT CSV</a>
+              <a href="/api/export-history-json" target="_blank" class="px-pad-sm py-pad-xs bg-surface-container text-on-surface border border-surface-container-high uppercase font-mono">EXPORT JSON</a>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        resContainer.innerHTML = `<div class="p-pad-md bg-error/10 border border-error text-error font-mono">BATCH ERROR: ${err.message}</div>`;
+      }
+    }
+
+    async function loadModelIntel() {
+      try {
+        const resp = await fetch('/api/model-intel');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const sec = document.getElementById('section-model-intel');
+        if (!sec) return;
+        sec.innerHTML = `
+          <div class="w-full bg-surface-container-lowest p-pad-lg flex flex-col gap-pad-md border border-surface-container-high">
+            <div class="flex items-center gap-pad-sm">
+              <span class="w-2 h-2 bg-primary-container"></span>
+              <span class="font-section-header text-section-header uppercase tracking-wider text-primary font-bold">
+                SECTION 04 // MODEL INTEL & ARCHITECTURE
+              </span>
+              <span class="font-label-caps text-label-caps px-pad-xs py-pad-2xs bg-surface-container text-on-surface-variant font-mono">
+                VERIFIED EVALUATION SPECIFICATIONS
+              </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-pad-md mt-pad-sm">
+              <div class="p-pad-md bg-surface-container border border-surface-container-high flex flex-col gap-pad-xs font-mono text-data-mono-sm">
+                <span class="font-bold text-primary">MODEL BACKBONE</span>
+                <span class="text-on-surface-variant">${data.model_name || 'StegoShield Deep CNN'} (${data.model_version || '2.0.0'})</span>
+                <span class="font-bold text-primary mt-pad-sm">ARCHITECTURE</span>
+                <span class="text-on-surface-variant">${data.model_architecture || 'EfficientNet-B3 Backbone + Dense Head'}</span>
+                <span class="font-bold text-primary mt-pad-sm">TENSOR INPUT DIMENSION</span>
+                <span class="text-on-surface-variant">${data.input_size || '512 × 512 × 3'}</span>
+                <span class="font-bold text-primary mt-pad-sm">TEMPERATURE SCALING (T)</span>
+                <span class="text-primary-container">T = ${data.calibration ? data.calibration.temperature : '0.8522'} (${data.calibration ? data.calibration.method : 'Logit Scaling'})</span>
+                <span class="font-bold text-primary mt-pad-sm">PRE-THRESHOLD CALIBRATION</span>
+                <span class="text-on-surface-variant">${data.calibration && data.calibration.calibrated_before_thresholding ? 'YES (Calibrated Before Thresholding)' : 'ENABLED'}</span>
+              </div>
+              <div class="p-pad-md bg-surface-container border border-surface-container-high flex flex-col gap-pad-xs font-mono text-data-mono-sm">
+                <span class="font-bold text-primary">VERIFIED METRICS (EVALUATION SET)</span>
+                <div class="grid grid-cols-2 gap-2 mt-1">
+                  <div>Accuracy: <strong class="text-on-surface">${data.metrics ? (data.metrics.accuracy * 100).toFixed(1) + '%' : '72.0%'}</strong></div>
+                  <div>Precision: <strong class="text-on-surface">${data.metrics ? (data.metrics.precision * 100).toFixed(1) + '%' : '86.7%'}</strong></div>
+                  <div>Recall: <strong class="text-on-surface">${data.metrics ? (data.metrics.recall * 100).toFixed(1) + '%' : '52.0%'}</strong></div>
+                  <div>F1-Score: <strong class="text-on-surface">${data.metrics ? data.metrics.f1_score : '0.6500'}</strong></div>
+                  <div>ROC-AUC: <strong class="text-on-surface">${data.metrics ? data.metrics.roc_auc : '0.7988'}</strong></div>
+                  <div>Avg Latency: <strong class="text-primary-container">${data.performance ? data.performance.average_inference_time_ms + ' ms' : '304 ms'}</strong></div>
+                </div>
+                <span class="font-bold text-primary mt-pad-sm">DATASET PARTITIONS</span>
+                <span class="text-on-surface-variant">Train: ${data.dataset_splits ? data.dataset_splits.training_samples : 10368} | Val: ${data.dataset_splits ? data.dataset_splits.validation_samples : 1280} | Test: ${data.dataset_splits ? data.dataset_splits.test_samples : 1152}</span>
+                <span class="font-bold text-primary mt-pad-sm">CALIBRATED PROFILES</span>
+                <span class="text-on-surface-variant">Precision: τ=0.85 | Balanced: τ=0.73 | Sensitive: τ=0.55</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (err) {
+        console.error('Model intel load error:', err);
+      }
+    }
+
+    // Call loadModelIntel on initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadModelIntel();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "temperature": 0.8522,
+  "method": "Temperature Scaling (Logit Scaling via Platt/Guo et al.)",
+  "samples": 1280,
+  "val_clean": 640,
+  "val_stego": 640,
+  "calibrated_before_thresholding": true,
+  "thresholds": {
+    "SENSITIVE": 0.55,
+    "BALANCED": 0.73,
+    "PRECISION": 0.85
+  }
+}
